@@ -1,6 +1,6 @@
 import os
 from core import filtra_punti
-from data_loader import crea_punto, carica_csv, carica_json
+from data_loader import carica_csv, carica_json
 
 def chiedi_parametri_ricerca(): #valori test usati: lat 41.8902 , long 12.4922. raggio 5 
     while True:
