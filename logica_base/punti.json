@@ -1,0 +1,9 @@
+[
+    {"nome": "Cadorna", "lat": 45.4784, "lon": 9.1755},
+    {"nome": "Bergamo", "lat": 45.6983, "lon": 9.6773},
+    {"nome": "Torino", "lat": 45.0703, "lon": 7.6869},
+    {"nome": "Roma", "lat": 41.9028, "lon": 12.4964},
+    {"nome": "SenzaLat", "lon": 9.1900},
+    {"nome": "LatTesto", "lat": "abc", "lon": 9.1900},
+    {"nome": "FuoriRange", "lat": 450.2, "lon": 9.1900}
+]

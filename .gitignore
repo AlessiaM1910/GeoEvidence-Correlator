@@ -1,0 +1,65 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------- Ambienti virtuali ----------
+venv/
+.venv/
+env/
+ENV/
+
+# ---------- Packaging / build ----------
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---------- Editor / IDE ----------
+.vscode/
+.idea/
+*.swp
+*~
+
+# ---------- Sistema operativo ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- Segreti e configurazioni locali ----------
+.env
+*.env
+secrets.*
+*api_key*
+*.key
+
+# ---------- Report generati dal programma ----------
+report*.json
+report*.csv
+output/
+reports/
+
+# ---------- DATI FORENSI REALI: mai nel repository ----------
+evidence/
+evidenze/
+casi_reali/
+private_data/
+*.E01
+*.dd
+*.raw
+*.img
+*.aff
+*.vmdk
+
+# ---------- Estrazioni di app (database, backup) ----------
+*.crypt12
+*.crypt14
+*.crypt15
+msgstore*.db
+*.sqlite
+*.sqlite3
