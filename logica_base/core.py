@@ -24,7 +24,7 @@ def distanza_haversine(lat1,lon1,lat2,lon2):
 
 def rientra_nel_raggio(lat1,lon1,lat2,lon2, raggiokm ):
     dist= distanza_haversine(lat1,lon1,lat2,lon2)
-    if dist<=raggiokm:
+    if dist<=raggiokm: #confronto se la distanza calcolata rientra nel raggio stabilito
         return True
     return False
 
@@ -36,5 +36,5 @@ def filtra_punti(punti,lat_centro,long_centro,raggiokm):
         d=distanza_haversine(lat,lon,lat_centro,long_centro)
         if d<=raggiokm:
             filtrati.append((nome,d))
-    filtrati.sort(key=lambda elemento: elemento[1]) #prendo secondo elemento tupla e in abse a quello riordino
+    filtrati.sort(key=lambda elemento: elemento[1]) #prendo secondo elemento tupla e in basee a quello riordino
     return filtrati

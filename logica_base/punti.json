@@ -5,5 +5,49 @@
     {"nome": "Roma", "lat": 41.9028, "lon": 12.4964},
     {"nome": "SenzaLat", "lon": 9.1900},
     {"nome": "LatTesto", "lat": "abc", "lon": 9.1900},
-    {"nome": "FuoriRange", "lat": 450.2, "lon": 9.1900}
+    {"nome": "FuoriRange", "lat": 450.2, "lon": 9.1900},
+  {
+    "nome": "IMG_2026_01.jpg",
+    "lat": 41.8902,
+    "lon": 12.4922
+  },
+  {
+    "nome": "IMG_2026_02.jpg",
+    "lat": 41.9029,
+    "lon": 12.4534
+    },
+  {
+    "nome": "waze_history.db",
+    "lat": 45.4642,
+    "lon": 9.1916
+  },
+  {
+    "nome": "Pantheon (Roma - Vicino)",
+    "lat": 41.8986,
+    "lon": 12.4769
+  },
+  {
+    "nome": "Central Park (New York - Lontanissimo)",
+    "lat": 40.7822,
+    "lon": -73.9653
+  },
+  {
+    "nome": "Errore: Manca la chiave lat",
+    "lon": 12.4922
+  },
+  {
+    "nome": "Errore: Valori Nulli",
+    "lat": null,
+    "lon": null
+  },
+  {
+    "nome": "Aeroporto Fiumicino (Fuori Roma)",
+    "lat": 41.8003,
+    "lon": 12.2389
+  },
+  {
+    "nome": "Errore: Latitudine negativa oltre -90",
+    "lat": -95.0,
+    "lon": 12.0
+  }
 ]

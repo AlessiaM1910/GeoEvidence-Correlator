@@ -6,3 +6,13 @@ Roma,41.9028,12.4964
 Vuota,,9.1900
 Testo,abc,9.1900
 Fuori,450.2,9.1900
+IMG_2026_01.jpg,41.8902,12.4922
+IMG_2026_02.jpg,41.9029,12.4534
+waze_history.db,45.4642,9.1916
+Stazione Termini (Roma - Vicino),41.9014,12.5009
+San Pietro (Roma - Vicino),41.9029,12.4534
+Duomo di Milano (Lontano),45.4642,9.1916
+Errore: Latitudine oltre 90,95.1234,10.0000
+Errore: Longitudine oltre 180,41.8902,200.500
+Errore: Testo invece di numero,errore,12.5000
+Napoli (Medio raggio),40.8518,14.2681
