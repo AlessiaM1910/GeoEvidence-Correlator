@@ -7,9 +7,11 @@ def chiedi_parametri_ricerca(): #valori test usati: lat 41.8902 , long 12.4922. 
         try:
             lat_centro = float(input("Latitudine del centro: "))
             if not (-90 <= lat_centro <= 90): #se metto valori duori dal range chiede di nuovo di reinserirlo
+                print("Latitudine non valida, deve essere compresa tra -90 e 90")
                 continue
             long_centro = float(input("Longitudine del centro: "))
             if not (-180 <= long_centro <= 180):
+                print("Longitudine non valida, deve essere compresa tra -180 e 180")
                 continue
             raggiokm = float(input("Raggio di ricerca (km): "))
             if raggiokm <= 0:
