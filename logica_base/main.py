@@ -14,7 +14,7 @@ def chiedi_parametri_ricerca(): #valori test usati: lat 41.8902 , long 12.4922. 
                 print("Longitudine non valida, deve essere compresa tra -180 e 180")
                 continue
             raggiokm = float(input("Raggio di ricerca (km): "))
-            if raggiokm <= 0:
+            if raggiokm < 0:
                 print("Il raggio deve essere maggiore di zero")
                 continue
 

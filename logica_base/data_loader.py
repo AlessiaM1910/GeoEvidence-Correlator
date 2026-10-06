@@ -1,5 +1,6 @@
 import csv
 import json
+import math
 
 def crea_punto(lat,lon,nome): #qui stabiliamo se un punto è valido o no
     try:
@@ -8,10 +9,16 @@ def crea_punto(lat,lon,nome): #qui stabiliamo se un punto è valido o no
     except (ValueError, TypeError):
         return None
 
+    if not math.isfinite(lat) or not math.isfinite(lon):
+        return None
+
     if not(-90<= lat <=90): #controllo se la latitudine rientra nel range
         return None
     
     if not(-180<= lon <= 180): #controllo longitudine
+        return None
+
+    if nome is None or not str(nome).strip():
         return None
 
     return (lat,lon,nome)
@@ -24,8 +31,16 @@ def carica_csv(percorso, campo_lat="lat", campo_lon="lon",campo_nome="nome"):
     try:
         with open(percorso,newline="", encoding="utf-8") as f:
             lettore= csv.DictReader(f) #legge file aperto e lo converte in dizionario
+            if not lettore.fieldnames:
+                print("CSV vuoto o senza intestazione")
+                return []
+            
             if campo_lat not in lettore.fieldnames or campo_lon not in lettore.fieldnames:
                 print ("Colonne non trovate: attese", campo_lat, campo_lon, "trovate", lettore.fieldnames)
+                return []
+
+            if campo_nome not in lettore.fieldnames:
+                print("Colonna 'nome' non trovata")
                 return []
 
             for riga in lettore:
@@ -48,7 +63,15 @@ def carica_json(percorso, campo_lat="lat", campo_lon="lon",campo_nome="nome" ):
         with open(percorso, encoding="utf-8") as f:
             dati=json.load(f)
 
+        if not isinstance(dati, list):
+            print("Il JSON deve contenere una lista di punti")
+            return []
+
         for elemento in dati:
+            if not isinstance(elemento, dict):
+                scartate += 1
+                continue
+
             lat=elemento.get(campo_lat) #qui utilizzo get perchè in caso di dati mancanti o altro restituisce None
             lon=elemento.get(campo_lon)
             nome=elemento.get(campo_nome)
