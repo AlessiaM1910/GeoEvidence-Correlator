@@ -9,7 +9,10 @@ def crea_punto(lat,lon,nome): #qui stabiliamo se un punto è valido o no
     except (ValueError, TypeError):
         return None
 
-    if not math.isfinite(lat) or not math.isfinite(lon):
+    if math.isnan(lat) or math.isinf(lat):
+        return None
+
+    if math.isnan(lon) or math.isinf(lon):
         return None
 
     if not(-90<= lat <=90): #controllo se la latitudine rientra nel range
