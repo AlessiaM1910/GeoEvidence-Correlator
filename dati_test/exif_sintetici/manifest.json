@@ -1,0 +1,802 @@
+[
+    {
+        "nome_file": "dentro_001.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.37515500455648,
+        "lon": 16.271693014503285,
+        "timestamp": "2026:01:01 10:01:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_002.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.371839645436005,
+        "lon": 16.202887665486514,
+        "timestamp": "2026:01:01 10:02:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_003.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.361438632131936,
+        "lon": 16.224163113895543,
+        "timestamp": "2026:01:01 10:03:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_004.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.34419717171907,
+        "lon": 16.23933401592535,
+        "timestamp": "2026:01:01 10:04:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_005.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.35384624771162,
+        "lon": 16.208691137763935,
+        "timestamp": "2026:01:01 10:05:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_006.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.33640357373508,
+        "lon": 16.188546945867415,
+        "timestamp": "2026:01:01 10:06:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_007.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.39009095833986,
+        "lon": 16.22516814871517,
+        "timestamp": "2026:01:01 10:07:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_008.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.37169066582886,
+        "lon": 16.18389156022033,
+        "timestamp": "2026:01:01 10:08:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_009.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.37572373399685,
+        "lon": 16.20491930269293,
+        "timestamp": "2026:01:01 10:09:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_010.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.36367756993592,
+        "lon": 16.230335454555984,
+        "timestamp": "2026:01:01 10:10:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_011.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.371367318542504,
+        "lon": 16.22561974480641,
+        "timestamp": "2026:01:01 10:11:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_012.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.356447588458366,
+        "lon": 16.238316494919445,
+        "timestamp": "2026:01:01 10:12:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_013.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.35861576894712,
+        "lon": 16.2745994929611,
+        "timestamp": "2026:01:01 10:13:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_014.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.372785205902524,
+        "lon": 16.2089147409132,
+        "timestamp": "2026:01:01 10:14:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_015.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.36442725027814,
+        "lon": 16.22301456545631,
+        "timestamp": "2026:01:01 10:15:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_016.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.37526096057467,
+        "lon": 16.18024026024227,
+        "timestamp": "2026:01:01 10:16:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_017.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.343589073650115,
+        "lon": 16.239204075382077,
+        "timestamp": "2026:01:01 10:17:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_018.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.34148421382048,
+        "lon": 16.18930309931318,
+        "timestamp": "2026:01:01 10:18:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_019.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.3363443392723,
+        "lon": 16.227020993478163,
+        "timestamp": "2026:01:01 10:19:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_020.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.36827760389838,
+        "lon": 16.229180021500838,
+        "timestamp": "2026:01:01 10:20:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_021.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.371570006265664,
+        "lon": 16.228746610814596,
+        "timestamp": "2026:01:01 10:21:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_022.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.37675103275261,
+        "lon": 16.209995299308503,
+        "timestamp": "2026:01:01 10:22:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_023.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.37226847804351,
+        "lon": 16.227556161318034,
+        "timestamp": "2026:01:01 10:23:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_024.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.32788810190423,
+        "lon": 16.20759344117016,
+        "timestamp": "2026:01:01 10:24:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_025.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.357662818945435,
+        "lon": 16.196150216347405,
+        "timestamp": "2026:01:01 10:25:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_026.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.402909479782124,
+        "lon": 16.22436946119433,
+        "timestamp": "2026:01:01 10:26:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_027.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.37767159886659,
+        "lon": 16.217180319845056,
+        "timestamp": "2026:01:01 10:27:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_028.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.382925198791504,
+        "lon": 16.254304746183266,
+        "timestamp": "2026:01:01 10:28:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_029.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.37605880047144,
+        "lon": 16.229663283125888,
+        "timestamp": "2026:01:01 10:29:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_030.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.35061643061982,
+        "lon": 16.248202131195967,
+        "timestamp": "2026:01:01 10:30:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_031.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.35545946393526,
+        "lon": 16.217498570556927,
+        "timestamp": "2026:01:01 10:31:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_032.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.36038169705737,
+        "lon": 16.202095451024434,
+        "timestamp": "2026:01:01 10:32:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_033.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.37556190315164,
+        "lon": 16.23018736882375,
+        "timestamp": "2026:01:01 10:33:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_034.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.35399150804481,
+        "lon": 16.262232850113378,
+        "timestamp": "2026:01:01 10:34:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_035.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.35599715477684,
+        "lon": 16.216427336558695,
+        "timestamp": "2026:01:01 10:35:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_036.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.373455598012754,
+        "lon": 16.20628592696721,
+        "timestamp": "2026:01:01 10:36:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_037.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.36394833709819,
+        "lon": 16.211419638034045,
+        "timestamp": "2026:01:01 10:37:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_038.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.38427718559045,
+        "lon": 16.19753425520446,
+        "timestamp": "2026:01:01 10:38:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_039.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.38239345199034,
+        "lon": 16.207995677788745,
+        "timestamp": "2026:01:01 10:39:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "dentro_040.jpg",
+        "categoria": "gps_valido_dentro",
+        "lat": 39.40015840877011,
+        "lon": 16.220595813447403,
+        "timestamp": "2026:01:01 10:40:00",
+        "esito_atteso": "DENTRO_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_001.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.37128007564969,
+        "lon": 16.16004776056218,
+        "timestamp": "2026:01:01 10:41:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_002.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.47340314686398,
+        "lon": 16.36796238447573,
+        "timestamp": "2026:01:01 10:42:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_003.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.246117996904566,
+        "lon": 16.25008433862797,
+        "timestamp": "2026:01:01 10:43:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_004.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.388140511278934,
+        "lon": 16.309489136816865,
+        "timestamp": "2026:01:01 10:44:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_005.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.29081693970107,
+        "lon": 16.3495708038638,
+        "timestamp": "2026:01:01 10:45:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_006.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.468408917581556,
+        "lon": 16.268163513776244,
+        "timestamp": "2026:01:01 10:46:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_007.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.546858402286695,
+        "lon": 16.369381844587906,
+        "timestamp": "2026:01:01 10:47:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_008.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.54745986320183,
+        "lon": 16.38544349206279,
+        "timestamp": "2026:01:01 10:48:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_009.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.53668537077835,
+        "lon": 16.122879300748878,
+        "timestamp": "2026:01:01 10:49:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_010.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.28199570403681,
+        "lon": 16.226148740186886,
+        "timestamp": "2026:01:01 10:50:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_011.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.31631750832894,
+        "lon": 16.342630026634538,
+        "timestamp": "2026:01:01 10:51:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_012.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.48420174329291,
+        "lon": 16.437413949200277,
+        "timestamp": "2026:01:01 10:52:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_013.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.2630537447669,
+        "lon": 15.987058382505325,
+        "timestamp": "2026:01:01 10:53:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_014.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.22211487639739,
+        "lon": 16.15028129767063,
+        "timestamp": "2026:01:01 10:54:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_015.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.32753017056545,
+        "lon": 16.33870083278464,
+        "timestamp": "2026:01:01 10:55:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_016.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.41329320849884,
+        "lon": 16.087207279401923,
+        "timestamp": "2026:01:01 10:56:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_017.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.43724483689416,
+        "lon": 16.058911426627674,
+        "timestamp": "2026:01:01 10:57:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_018.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.324280623548155,
+        "lon": 16.170265026587344,
+        "timestamp": "2026:01:01 10:58:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_019.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.21537328720378,
+        "lon": 16.431340621481127,
+        "timestamp": "2026:01:01 10:59:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_020.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.458552981405106,
+        "lon": 16.01048290556423,
+        "timestamp": "2026:01:01 11:00:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_021.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.418445332485355,
+        "lon": 16.115949454214388,
+        "timestamp": "2026:01:01 11:01:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_022.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.492618592263874,
+        "lon": 16.43744097418346,
+        "timestamp": "2026:01:01 11:02:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_023.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.38919616231832,
+        "lon": 16.02603205624871,
+        "timestamp": "2026:01:01 11:03:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_024.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.420092559118004,
+        "lon": 16.357197946700126,
+        "timestamp": "2026:01:01 11:04:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_025.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.4313185586531,
+        "lon": 16.18565359697891,
+        "timestamp": "2026:01:01 11:05:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_026.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.566035076356755,
+        "lon": 16.286468381113878,
+        "timestamp": "2026:01:01 11:06:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_027.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.52480201799327,
+        "lon": 16.10374050272287,
+        "timestamp": "2026:01:01 11:07:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_028.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.255490793566054,
+        "lon": 16.40147776232618,
+        "timestamp": "2026:01:01 11:08:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_029.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.30925524634675,
+        "lon": 16.194166152542266,
+        "timestamp": "2026:01:01 11:09:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_030.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.324474717056205,
+        "lon": 16.13559984062283,
+        "timestamp": "2026:01:01 11:10:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_031.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.279460859764114,
+        "lon": 16.325504829088345,
+        "timestamp": "2026:01:01 11:11:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_032.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.30699937424732,
+        "lon": 16.085024939143977,
+        "timestamp": "2026:01:01 11:12:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_033.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.48757567526475,
+        "lon": 16.376259733428014,
+        "timestamp": "2026:01:01 11:13:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_034.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.15921737281261,
+        "lon": 16.17661926594974,
+        "timestamp": "2026:01:01 11:14:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "fuori_035.jpg",
+        "categoria": "gps_valido_fuori",
+        "lat": 39.25256757734906,
+        "lon": 16.086790454081893,
+        "timestamp": "2026:01:01 11:15:00",
+        "esito_atteso": "FUORI_RAGGIO"
+    },
+    {
+        "nome_file": "senza_gps_001.jpg",
+        "categoria": "senza_gps",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:16:00",
+        "esito_atteso": "SENZA_GPS"
+    },
+    {
+        "nome_file": "senza_gps_002.jpg",
+        "categoria": "senza_gps",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:17:00",
+        "esito_atteso": "SENZA_GPS"
+    },
+    {
+        "nome_file": "senza_gps_003.jpg",
+        "categoria": "senza_gps",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:18:00",
+        "esito_atteso": "SENZA_GPS"
+    },
+    {
+        "nome_file": "senza_gps_004.jpg",
+        "categoria": "senza_gps",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:19:00",
+        "esito_atteso": "SENZA_GPS"
+    },
+    {
+        "nome_file": "senza_gps_005.jpg",
+        "categoria": "senza_gps",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:20:00",
+        "esito_atteso": "SENZA_GPS"
+    },
+    {
+        "nome_file": "senza_gps_006.jpg",
+        "categoria": "senza_gps",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:21:00",
+        "esito_atteso": "SENZA_GPS"
+    },
+    {
+        "nome_file": "senza_gps_007.jpg",
+        "categoria": "senza_gps",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:22:00",
+        "esito_atteso": "SENZA_GPS"
+    },
+    {
+        "nome_file": "senza_gps_008.jpg",
+        "categoria": "senza_gps",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:23:00",
+        "esito_atteso": "SENZA_GPS"
+    },
+    {
+        "nome_file": "senza_gps_009.jpg",
+        "categoria": "senza_gps",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:24:00",
+        "esito_atteso": "SENZA_GPS"
+    },
+    {
+        "nome_file": "senza_gps_010.jpg",
+        "categoria": "senza_gps",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:25:00",
+        "esito_atteso": "SENZA_GPS"
+    },
+    {
+        "nome_file": "gps_incompleto_001.jpg",
+        "categoria": "gps_incompleto",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:26:00",
+        "esito_atteso": "GPS_NON_VALIDO"
+    },
+    {
+        "nome_file": "gps_incompleto_002.jpg",
+        "categoria": "gps_incompleto",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:27:00",
+        "esito_atteso": "GPS_NON_VALIDO"
+    },
+    {
+        "nome_file": "gps_incompleto_003.jpg",
+        "categoria": "gps_incompleto",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:28:00",
+        "esito_atteso": "GPS_NON_VALIDO"
+    },
+    {
+        "nome_file": "gps_incompleto_004.jpg",
+        "categoria": "gps_incompleto",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:29:00",
+        "esito_atteso": "GPS_NON_VALIDO"
+    },
+    {
+        "nome_file": "gps_incompleto_005.jpg",
+        "categoria": "gps_incompleto",
+        "lat": null,
+        "lon": null,
+        "timestamp": "2026:01:01 11:30:00",
+        "esito_atteso": "GPS_NON_VALIDO"
+    },
+    {
+        "nome_file": "corrotto_001.jpg",
+        "categoria": "file_corrotto",
+        "lat": null,
+        "lon": null,
+        "timestamp": null,
+        "esito_atteso": "NON_LEGGIBILE"
+    },
+    {
+        "nome_file": "corrotto_002.jpg",
+        "categoria": "file_corrotto",
+        "lat": null,
+        "lon": null,
+        "timestamp": null,
+        "esito_atteso": "NON_LEGGIBILE"
+    },
+    {
+        "nome_file": "corrotto_003.jpg",
+        "categoria": "file_corrotto",
+        "lat": null,
+        "lon": null,
+        "timestamp": null,
+        "esito_atteso": "NON_LEGGIBILE"
+    },
+    {
+        "nome_file": "corrotto_004.jpg",
+        "categoria": "file_corrotto",
+        "lat": null,
+        "lon": null,
+        "timestamp": null,
+        "esito_atteso": "NON_LEGGIBILE"
+    },
+    {
+        "nome_file": "corrotto_005.jpg",
+        "categoria": "file_corrotto",
+        "lat": null,
+        "lon": null,
+        "timestamp": null,
+        "esito_atteso": "NON_LEGGIBILE"
+    },
+    {
+        "nome_file": "corrotto_006.jpg",
+        "categoria": "file_corrotto",
+        "lat": null,
+        "lon": null,
+        "timestamp": null,
+        "esito_atteso": "NON_LEGGIBILE"
+    },
+    {
+        "nome_file": "corrotto_007.jpg",
+        "categoria": "file_corrotto",
+        "lat": null,
+        "lon": null,
+        "timestamp": null,
+        "esito_atteso": "NON_LEGGIBILE"
+    },
+    {
+        "nome_file": "corrotto_008.jpg",
+        "categoria": "file_corrotto",
+        "lat": null,
+        "lon": null,
+        "timestamp": null,
+        "esito_atteso": "NON_LEGGIBILE"
+    },
+    {
+        "nome_file": "corrotto_009.jpg",
+        "categoria": "file_corrotto",
+        "lat": null,
+        "lon": null,
+        "timestamp": null,
+        "esito_atteso": "NON_LEGGIBILE"
+    },
+    {
+        "nome_file": "corrotto_010.jpg",
+        "categoria": "file_corrotto",
+        "lat": null,
+        "lon": null,
+        "timestamp": null,
+        "esito_atteso": "NON_LEGGIBILE"
+    }
+]
