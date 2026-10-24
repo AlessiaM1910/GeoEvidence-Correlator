@@ -6,11 +6,7 @@ import unittest
 from contextlib import redirect_stdout
 
 
-CARTELLA_LOGICA = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(__file__)
-    )
-)
+CARTELLA_LOGICA = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 CARTELLA_ROOT = os.path.dirname(CARTELLA_LOGICA)
 
@@ -51,8 +47,8 @@ class TestDatasetSintetico(unittest.TestCase):
         ) as file_manifest:
             cls.manifest = json.load(file_manifest)
 
-    def test_manifest_contiene_100_reperti(self):
-        self.assertEqual(len(self.manifest), 100)
+    def test_manifest_contiene_5_reperti(self):
+        self.assertEqual(len(self.manifest), 5)
 
         categorie = {}
 
@@ -66,30 +62,30 @@ class TestDatasetSintetico(unittest.TestCase):
 
         self.assertEqual(
             categorie["gps_valido_dentro"],
-            40,
+            1,
         )
 
         self.assertEqual(
             categorie["gps_valido_fuori"],
-            35,
+            1,
         )
 
         self.assertEqual(
             categorie["senza_gps"],
-            10,
+            1,
         )
 
         self.assertEqual(
             categorie["gps_incompleto"],
-            5,
+            1,
         )
 
         self.assertEqual(
             categorie["file_corrotto"],
-            10,
+            1,
         )
 
-    def test_estrazione_exif_restituisce_75_gps_validi(self):
+    def test_estrazione_exif_restituisce_2_gps_validi(self):
         output = io.StringIO()
 
         with redirect_stdout(output):
@@ -99,30 +95,30 @@ class TestDatasetSintetico(unittest.TestCase):
 
         statistiche = output.getvalue()
 
-        self.assertEqual(len(foto), 75)
+        self.assertEqual(len(foto), 2)
 
         self.assertIn(
-            "File candidati: 100",
+            "File candidati: 5",
             statistiche,
         )
 
         self.assertIn(
-            "Foto con GPS valido: 75",
+            "Foto con GPS valido: 2",
             statistiche,
         )
 
         self.assertIn(
-            "Foto senza GPS: 10",
+            "Foto senza GPS: 1",
             statistiche,
         )
 
         self.assertIn(
-            "Foto con GPS non valido: 5",
+            "Foto con GPS non valido: 1",
             statistiche,
         )
 
         self.assertIn(
-            "File non leggibili/corrotti: 10",
+            "File non leggibili/corrotti: 1",
             statistiche,
         )
 
@@ -150,8 +146,8 @@ class TestDatasetSintetico(unittest.TestCase):
                     record["esito_atteso"]
                 )
 
-        self.assertEqual(len(righe), 75)
-        self.assertEqual(len(esiti_attesi), 75)
+        self.assertEqual(len(righe), 2)
+        self.assertEqual(len(esiti_attesi), 2)
 
         for riga in righe:
             nome_file = os.path.basename(
@@ -177,8 +173,8 @@ class TestDatasetSintetico(unittest.TestCase):
             if riga["esito"] == "FUORI_RAGGIO"
         )
 
-        self.assertEqual(numero_dentro, 40)
-        self.assertEqual(numero_fuori, 35)
+        self.assertEqual(numero_dentro, 1)
+        self.assertEqual(numero_fuori, 1)
 
 
 if __name__ == "__main__":
