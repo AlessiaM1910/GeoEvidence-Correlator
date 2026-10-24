@@ -13,7 +13,7 @@ IMMAGINE_BASE = os.path.join(
     CARTELLA_ROOT,
     "dati_test",
     "sorgenti",
-    "base_londra_cc0.jpg",
+    "base_cc0.jpg",
 )
 
 CARTELLA_OUTPUT = os.path.join(
