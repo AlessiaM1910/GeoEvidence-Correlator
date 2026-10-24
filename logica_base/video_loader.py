@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 
+#stessa logica di exif_loader solo che invece di usare pillow richiameremo exiftool.exe
 
 class VideoNonLeggibileError(Exception):
     pass
@@ -69,12 +70,8 @@ def estrai_metadati_video(percorso_video, exiftool_path):
     return dati[0]
 
 
+#restituisce dati GPS trovati da Exiftool, altrimenti retsituisce none
 def estrai_gps_info_video(metadati):
-    """
-    Restituisce solo i dati GPS trovati da ExifTool.
-    Se non esiste alcun GPS, restituisce None.
-    """
-
     if not metadati:
         return None
 
