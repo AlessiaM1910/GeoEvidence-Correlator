@@ -85,6 +85,14 @@ def classifica_reperti(evidenze, lat_centro, lon_centro, raggiokm):
 
     return righe_report
 
+def formatta_numero_csv(valore):
+    if isinstance(valore, float):
+        testo = "{:.6f}".format(valore)
+        testo = testo.rstrip("0").rstrip(".")
+        return testo.replace(".", ",")
+
+    return valore
+
 def scrivi_report_csv(percorso_report, righe_report):
     with open(percorso_report, "w", newline="", encoding= "utf-8-sig") as file_report:
         scrittore=csv.DictWriter(file_report, fieldnames=CAMPI_REPORT, delimiter=";")
@@ -92,4 +100,11 @@ def scrivi_report_csv(percorso_report, righe_report):
         scrittore.writeheader()
 
         for riga in righe_report:
-            scrittore.writerow(riga)
+            riga_formattata = {}
+
+            for campo in CAMPI_REPORT:
+                riga_formattata[campo] = formatta_numero_csv(
+                    riga.get(campo, "")
+                )
+
+            scrittore.writerow(riga_formattata)

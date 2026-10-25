@@ -304,6 +304,21 @@ class TestReport(unittest.TestCase):
             "EXIF",
         )
 
+        self.assertEqual(
+            righe_lette[0]["lat"],
+            "39,36336",
+        )
+
+        self.assertEqual(
+            righe_lette[0]["lon"],
+            "16,22622",
+        )
+
+        self.assertEqual(
+            righe_lette[0]["distanza_km"],
+            "0",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
