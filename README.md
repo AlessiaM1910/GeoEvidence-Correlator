@@ -16,6 +16,7 @@
 
 
 ## Struttura del progetto
+```text
 
 GeoEvidence-Correlator/
 |
