@@ -63,3 +63,4 @@ GeoEvidence-Correlator/
         |-- test_report.py
         |-- test_dataset_sintetico.py
         `-- test_dataset_video_sintetico.py
+        `-- test_integrazione_media.py

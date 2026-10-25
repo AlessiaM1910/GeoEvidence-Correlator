@@ -47,6 +47,21 @@ def evidenze_da_foto(foto):
 
     return evidenze
 
+def evidenze_da_video(video):
+    evidenze = []
+
+    for lat, lon, percorso, timestamp in video:
+        evidenze.append({
+            "nome_evidenza": percorso,
+            "lat": lat,
+            "lon": lon,
+            "timestamp": timestamp,
+            "tipo": "video",
+            "fonte": "ExifTool",
+        })
+
+    return evidenze
+
 def classifica_reperti(evidenze, lat_centro, lon_centro, raggiokm):
     righe_report=[]
 

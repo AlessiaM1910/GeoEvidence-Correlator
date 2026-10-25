@@ -2,7 +2,10 @@ import os
 from core import filtra_punti
 from data_loader import carica_csv, carica_json
 from exif_loader import scansiona_cartella
-from report import classifica_reperti,evidenze_da_foto,evidenze_da_punti,scrivi_report_csv
+from video_loader import scansiona_cartella_video
+from report import (classifica_reperti,evidenze_da_foto,evidenze_da_video,evidenze_da_punti,scrivi_report_csv)
+
+
 
 def chiedi_parametri_ricerca(): #valori test usati: lat 41.8902 , long 12.4922. raggio 5 
     while True:
@@ -26,14 +29,36 @@ def chiedi_parametri_ricerca(): #valori test usati: lat 41.8902 , long 12.4922. 
             print("Inserire numeri validi")
 
 def main():
-    cartella=os.path.dirname(os.path.abspath(__file__))
-    percorso_csv=os.path.join(cartella, "punti.csv")
-    percorso_json=os.path.join(cartella, "punti.json")
-    cartella_foto = os.path.join(cartella, "foto_test")
+    cartella = os.path.dirname(os.path.abspath(__file__))
+    radice_progetto = os.path.dirname(cartella)
+
+    percorso_csv = os.path.join(cartella, "punti.csv")
+    percorso_json = os.path.join(cartella, "punti.json")
+
+    cartella_foto = os.path.join(
+        radice_progetto,
+        "dati_test",
+        "exif_sintetici",
+        "immagini",
+    )
+
+    cartella_video = os.path.join(
+        radice_progetto,
+        "dati_test",
+        "video_sintetici",
+        "video",
+    )
+
+    percorso_exiftool = os.environ.get("EXIFTOOL_PATH")
+
+    if not percorso_exiftool:
+        print("Imposta la variabile EXIFTOOL_PATH prima di eseguire il programma.")
+        return
 
     punti_csv=carica_csv(percorso_csv)
     punti_json=carica_json(percorso_json)
     evidenze_foto = scansiona_cartella(cartella_foto)
+    evidenze_video = scansiona_cartella_video(cartella_video,percorso_exiftool)
 
     punti_foto = []  #qui effettuiamo conversione nel formato richiesto dalla funzione filtra punti
 
@@ -42,9 +67,16 @@ def main():
 
     print("Foto con GPS caricate:", len(punti_foto))
 
-    tutti_punti=punti_csv + punti_json + punti_foto #questo rimane utile per la funzione filtra punti
+    punti_video = [] #qua carichiamo punti video
 
-    evidenze_report= evidenze_da_punti(punti_csv,"CSV") + evidenze_da_punti(punti_json, "JSON") + evidenze_da_foto(evidenze_foto) #contiene tutte le informazioni che servono nel CSV
+    for lat, lon, percorso_relativo, timestamp in evidenze_video:
+        punti_video.append((lat, lon, percorso_relativo))
+
+    print("Video con GPS caricati:", len(punti_video))
+
+    tutti_punti=punti_csv + punti_json + punti_foto + punti_video #questo rimane utile per la funzione filtra punti
+
+    evidenze_report= evidenze_da_punti(punti_csv,"CSV") + evidenze_da_punti(punti_json, "JSON") + evidenze_da_foto(evidenze_foto) + evidenze_da_video(evidenze_video) #contiene tutte le informazioni che servono nel CSV
 
     if len(tutti_punti)== 0:
         print("Nessun punto caricato")

@@ -17,6 +17,7 @@ from report import (
     CAMPI_REPORT,
     evidenze_da_punti,
     evidenze_da_foto,
+    evidenze_da_video,
     classifica_reperti,
     scrivi_report_csv,
 )
@@ -84,6 +85,32 @@ class TestReport(unittest.TestCase):
                 }
             ],
         )
+
+    def test_evidenze_da_video(self):
+        video = [
+            (
+                39.375155,
+                16.271693,
+                "con_gps.mp4",
+                "2026:01:01 10:01:00+01:00",
+            )
+        ]
+
+        evidenze = evidenze_da_video(video)
+
+        self.assertEqual(
+            evidenze,
+            [
+                {
+                    "nome_evidenza": "con_gps.mp4",
+                    "lat": 39.375155,
+                    "lon": 16.271693,
+                    "timestamp": "2026:01:01 10:01:00+01:00",
+                    "tipo": "video",
+                    "fonte": "ExifTool",
+                }
+            ],
+    )
 
     def test_classifica_reperti_esito_dentro_fuori(self):
         evidenze = [
