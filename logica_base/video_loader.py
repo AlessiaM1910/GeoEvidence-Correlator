@@ -13,8 +13,11 @@ class ExifToolNonDisponibileError(Exception):
 
 
 ESTENSIONI_VIDEO = (".mp4", ".mov")
+TIPI_VIDEO_SUPPORTATI = ("MP4", "MOV")
 
 CAMPI_EXIFTOOL = (
+    "-FileType",
+    "-MIMEType",
     "-GPSLatitude",
     "-GPSLongitude",
     "-GPSAltitude",
@@ -67,7 +70,16 @@ def estrai_metadati_video(percorso_video, exiftool_path):
             "ExifTool non ha restituito metadati"
         )
 
-    return dati[0]
+    metadati = dati[0]
+
+    tipo_file = metadati.get("FileType")
+    if tipo_file not in TIPI_VIDEO_SUPPORTATI:
+        raise VideoNonLeggibileError("Formato video non supportato: {}".format(
+                    tipo_file or "sconosciuto"
+                )
+            )
+
+    return metadati
 
 
 #restituisce dati GPS trovati da Exiftool, altrimenti retsituisce none

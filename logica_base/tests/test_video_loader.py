@@ -154,6 +154,8 @@ class TestVideoLoader(unittest.TestCase):
         risposta_exiftool = [
             {
                 "SourceFile": "video.mp4",
+                "FileType": "MP4",
+                "MIMEType": "video/mp4",
                 "GPSLatitude": 39.8244,
                 "GPSLongitude": 16.194,
             }
@@ -188,6 +190,38 @@ class TestVideoLoader(unittest.TestCase):
             metadati["GPSLongitude"],
             16.194,
         )
+
+    def test_file_non_video_viene_rifiutato(self):
+        risposta_exiftool = [
+            {
+                "SourceFile": "corrotto.mp4",
+                "FileType": "TXT",
+                "MIMEType": "text/plain",
+            }
+        ]
+
+        processo_finto = Mock()
+        processo_finto.returncode = 0
+        processo_finto.stdout = json.dumps(
+            risposta_exiftool
+        )
+        processo_finto.stderr = ""
+
+        with patch(
+            "video_loader.os.path.isfile",
+            return_value=True,
+        ):
+            with patch(
+                "video_loader.subprocess.run",
+                return_value=processo_finto,
+            ):
+                with self.assertRaises(
+                    VideoNonLeggibileError
+                ):
+                    estrai_metadati_video(
+                        "corrotto.mp4",
+                        "exiftool.exe",
+                    )
 
     def test_exiftool_non_disponibile(self):
         with patch(

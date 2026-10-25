@@ -1,0 +1,29 @@
+[
+    {
+        "nome_file": "con_gps.mp4",
+        "categoria": "gps_valido",
+        "lat": 39.375155,
+        "lon": 16.271693,
+        "altitudine": 100.0,
+        "timestamp": "2026:01:01 10:01:00+01:00",
+        "esito_atteso": "GPS_VALIDO"
+    },
+    {
+        "nome_file": "senza_gps.mp4",
+        "categoria": "senza_gps",
+        "lat": null,
+        "lon": null,
+        "altitudine": null,
+        "timestamp": "2026:01:01 11:16:00+01:00",
+        "esito_atteso": "SENZA_GPS"
+    },
+    {
+        "nome_file": "corrotto.mp4",
+        "categoria": "file_corrotto",
+        "lat": null,
+        "lon": null,
+        "altitudine": null,
+        "timestamp": null,
+        "esito_atteso": "NON_LEGGIBILE"
+    }
+]
