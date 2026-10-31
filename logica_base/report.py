@@ -1,6 +1,6 @@
 import csv
 
-from core import distanza_haversine
+from core import haversine_distance
 
 #questo file serve per trasformare i dati di vari formatic (CSV, JSON, Foto) in righe che verranno salvate in un file CSV
 
@@ -66,7 +66,7 @@ def classifica_reperti(evidenze, lat_centro, lon_centro, raggiokm):
     righe_report=[]
 
     for elemento in evidenze: #per ogni "prova" calcola la distanza tra quest'ultima e il centro passato alla funzione
-        distanza= distanza_haversine(elemento["lat"], elemento["lon"], lat_centro, lon_centro)
+        distanza= haversine_distance(elemento["lat"], elemento["lon"], lat_centro, lon_centro)
 
         riga=dict(elemento) #crea una copia del dizionario senza alterare l'originale
         riga["distanza_km"]= round(distanza, 6)

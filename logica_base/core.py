@@ -1,28 +1,60 @@
 from math import *
 from georange import Coordinate
 
-def distanza_haversine(lat1,lon1,lat2,lon2):
+def haversine_distance(lat1,lon1,lat2,lon2):
+    """Calculate the distance in kilometers between two coordinates.
 
-    punto_a=Coordinate(lat1,lon1)
-    punto_b=Coordinate(lat2, lon2)
+    Args:
+        lat1: Latitude of the first point.
+        lon1: Longitude of the first point.
+        lat2: Latitude of the second point.
+        lon2: Longitude of the second point.
 
-    return punto_a.distanza(punto_b, "km")
+    Returns:
+        Distance between the points in kilometers.
+    """
+
+    point_a=Coordinate(lat1,lon1)
+    point_b=Coordinate(lat2, lon2)
+
+    return point_a.distance_to(point_b, "km")
 
 
 
-def rientra_nel_raggio(lat,lon,lat_centro,lon_centro, raggiokm ):
-    punto= Coordinate(lat, lon)
-    centro= Coordinate(lat_centro, lon_centro)
+def is_within_radius(lat,lon,center_lat,center_lon, radius_km ):
+    """Check whether a coordinate is within a radius in kilometers.
 
-    return punto.rientra_nel_raggio(centro, raggiokm, "km")
+    Args:
+        lat: Latitude of the point to evaluate.
+        lon: Longitude of the point to evaluate.
+        center_lat: Latitude of the radius center.
+        center_lon: Longitude of the radius center.
+        radius_km: Search radius in kilometers.
 
+    Returns:
+        True if the point is within the search radius.
+    """
+    point= Coordinate(lat, lon)
+    center= Coordinate(center_lat, center_lon)
 
-#la lista punti è definita come (lat,lon,nome)
-def filtra_punti(punti,lat_centro,long_centro,raggiokm):
-    filtrati=[]
-    for lat,lon,nome in punti:
-        d=distanza_haversine(lat,lon,lat_centro,long_centro)
-        if d<=raggiokm:
-            filtrati.append((nome,d))
-    filtrati.sort(key=lambda elemento: elemento[1]) #prendo secondo elemento tupla e in basee a quello riordino
-    return filtrati
+    return point.is_within_radius(center, radius_km, "km")
+
+def filter_points(points,center_lat,center_lon,radius_km):
+    """Filter and order named points within a geographic radius.
+
+    Args:
+        points: Tuples in the format (latitude, longitude, name).
+        center_lat: Latitude of the radius center.
+        center_lon: Longitude of the radius center.
+        radius_km: Search radius in kilometers.
+
+    Returns:
+        Tuples in the format (name, distance_km), ordered by distance.
+    """
+    filtered_points=[]
+    for lat,lon,name in points:
+        d= haversine_distance(lat,lon,center_lat, center_lon)
+        if d<=radius_km:
+            filtered_points.append((name,d))
+    filtered_points.sort(key=lambda item: item[1]) #prendo secondo elemento tupla e in basee a quello riordino
+    return filtered_points

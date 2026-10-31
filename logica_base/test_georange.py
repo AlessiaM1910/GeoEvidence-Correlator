@@ -1,204 +1,208 @@
 import unittest
 
-from georange import Coordinate, converti_distanza, distance, within_radius
+from georange import Coordinate, convert_distance, distance, within_radius
+
 
 class TestCoordinate(unittest.TestCase):
+    """Test the Coordinate class validation and geographic operations."""
 
-    def test_coordinate_valida(self):
-        punto = Coordinate(39.36336, 16.22622)
+    def test_valid_coordinate(self):
+        point = Coordinate(39.36336, 16.22622)
 
-        self.assertEqual(punto.lat, 39.36336)
-        self.assertEqual(punto.lon, 16.22622)
+        self.assertEqual(point.lat, 39.36336)
+        self.assertEqual(point.lon, 16.22622)
 
-    def test_coordinate_da_stringhe(self):
-        punto = Coordinate("39.36336", "16.22622")
+    def test_coordinate_from_strings(self):
+        point = Coordinate("39.36336", "16.22622")
 
-        self.assertEqual(punto.lat, 39.36336)
-        self.assertEqual(punto.lon, 16.22622)
+        self.assertEqual(point.lat, 39.36336)
+        self.assertEqual(point.lon, 16.22622)
 
-    def test_latitudine_troppo_alta(self):
+    def test_latitude_above_maximum(self):
         with self.assertRaises(ValueError):
             Coordinate(91, 10)
 
-    def test_latitudine_troppo_bassa(self):
+    def test_latitude_below_minimum(self):
         with self.assertRaises(ValueError):
             Coordinate(-91, 10)
 
-    def test_longitudine_troppo_alta(self):
+    def test_longitude_above_maximum(self):
         with self.assertRaises(ValueError):
             Coordinate(10, 181)
 
-    def test_longitudine_troppo_bassa(self):
+    def test_longitude_below_minimum(self):
         with self.assertRaises(ValueError):
             Coordinate(10, -181)
 
-    def test_coordinata_non_numerica(self):
+    def test_non_numeric_coordinate(self):
         with self.assertRaises(ValueError):
-            Coordinate("testo", 10)
+            Coordinate("text", 10)
 
-    def test_coordinata_nan(self):
+    def test_nan_coordinate(self):
         with self.assertRaises(ValueError):
             Coordinate(float("nan"), 10)
 
-    def test_distanza_identica_zero_km(self):
-        punto_a = Coordinate(39.36336, 16.22622)
-        punto_b = Coordinate(39.36336, 16.22622)
+    def test_same_coordinate_has_zero_distance_in_kilometers(self):
+        point_a = Coordinate(39.36336, 16.22622)
+        point_b = Coordinate(39.36336, 16.22622)
 
-        distanza = punto_a.distanza(punto_b)
+        distance_km = point_a.distance_to(point_b)
 
-        self.assertEqual(distanza, 0.0)
+        self.assertEqual(distance_km, 0.0)
 
-    def test_distanza_un_grado_equatore_in_km(self):
-        punto_a = Coordinate(0, 0)
-        punto_b = Coordinate(0, 1)
+    def test_one_degree_at_equator_in_kilometers(self):
+        point_a = Coordinate(0, 0)
+        point_b = Coordinate(0, 1)
 
-        distanza = punto_a.distanza(punto_b, "km")
+        distance_km = point_a.distance_to(point_b, "km")
 
-        self.assertGreater(distanza, 111.0)
-        self.assertLess(distanza, 112.0)
+        self.assertGreater(distance_km, 111.0)
+        self.assertLess(distance_km, 112.0)
 
-    def test_distanza_un_grado_equatore_in_metri(self):
-        punto_a = Coordinate(0, 0)
-        punto_b = Coordinate(0, 1)
+    def test_one_degree_at_equator_in_meters(self):
+        point_a = Coordinate(0, 0)
+        point_b = Coordinate(0, 1)
 
-        distanza = punto_a.distanza(punto_b, "m")
+        distance_meters = point_a.distance_to(point_b, "m")
 
-        self.assertGreater(distanza, 111000.0)
-        self.assertLess(distanza, 112000.0)
+        self.assertGreater(distance_meters, 111000.0)
+        self.assertLess(distance_meters, 112000.0)
 
-    def test_distanza_un_grado_equatore_in_miglia(self):
-        punto_a = Coordinate(0, 0)
-        punto_b = Coordinate(0, 1)
+    def test_one_degree_at_equator_in_miles(self):
+        point_a = Coordinate(0, 0)
+        point_b = Coordinate(0, 1)
 
-        distanza = punto_a.distanza(punto_b, "mi")
+        distance_miles = point_a.distance_to(point_b, "mi")
 
-        self.assertGreater(distanza, 69.0)
-        self.assertLess(distanza, 70.0)
+        self.assertGreater(distance_miles, 69.0)
+        self.assertLess(distance_miles, 70.0)
 
-    def test_unita_con_spazi_e_maiuscole(self):
-        punto_a = Coordinate(0, 0)
-        punto_b = Coordinate(0, 1)
+    def test_unit_with_spaces_and_uppercase_letters(self):
+        point_a = Coordinate(0, 0)
+        point_b = Coordinate(0, 1)
 
-        distanza = punto_a.distanza(punto_b, " KM ")
+        distance_km = point_a.distance_to(point_b, " KM ")
 
-        self.assertGreater(distanza, 111.0)
-        self.assertLess(distanza, 112.0)
+        self.assertGreater(distance_km, 111.0)
+        self.assertLess(distance_km, 112.0)
 
-    def test_unita_non_valida(self):
-        punto_a = Coordinate(0, 0)
-        punto_b = Coordinate(0, 1)
+    def test_unsupported_unit(self):
+        point_a = Coordinate(0, 0)
+        point_b = Coordinate(0, 1)
 
         with self.assertRaises(ValueError):
-            punto_a.distanza(punto_b, "yards")
+            point_a.distance_to(point_b, "yards")
 
-    def test_altro_punto_non_coordinate(self):
-        punto = Coordinate(0, 0)
+    def test_other_point_is_not_a_coordinate(self):
+        point = Coordinate(0, 0)
 
         with self.assertRaises(TypeError):
-            punto.distanza((0, 1))
+            point.distance_to((0, 1))
 
-    def test_rientra_nel_raggio_in_km(self):
-        punto_a = Coordinate(0, 0)
-        punto_b = Coordinate(0, 1)
+    def test_is_within_radius_in_kilometers(self):
+        point_a = Coordinate(0, 0)
+        point_b = Coordinate(0, 1)
 
         self.assertTrue(
-            punto_a.rientra_nel_raggio(punto_b, 112, "km")
+            point_a.is_within_radius(point_b, 112, "km")
         )
 
         self.assertFalse(
-            punto_a.rientra_nel_raggio(punto_b, 111, "km")
+            point_a.is_within_radius(point_b, 111, "km")
         )
 
-    def test_rientra_nel_raggio_in_metri(self):
-        punto_a = Coordinate(0, 0)
-        punto_b = Coordinate(0, 1)
+    def test_is_within_radius_in_meters(self):
+        point_a = Coordinate(0, 0)
+        point_b = Coordinate(0, 1)
 
         self.assertTrue(
-            punto_a.rientra_nel_raggio(punto_b, 112000, "m")
+            point_a.is_within_radius(point_b, 112000, "m")
         )
 
         self.assertFalse(
-            punto_a.rientra_nel_raggio(punto_b, 111000, "m")
+            point_a.is_within_radius(point_b, 111000, "m")
         )
 
-    def test_raggio_negativo(self):
-        punto_a = Coordinate(0, 0)
-        punto_b = Coordinate(0, 1)
+    def test_negative_radius(self):
+        point_a = Coordinate(0, 0)
+        point_b = Coordinate(0, 1)
 
         with self.assertRaises(ValueError):
-            punto_a.rientra_nel_raggio(punto_b, -1, "km")
+            point_a.is_within_radius(point_b, -1, "km")
 
 
-class TestConversioneDistanza(unittest.TestCase):
+class TestDistanceConversion(unittest.TestCase):
+    """Test the convert_distance function and public helper functions."""
 
-    def test_metri_in_metri(self):
-        risultato = converti_distanza(500, "m")
+    def test_meters_to_meters(self):
+        result = convert_distance(500, "m")
 
-        self.assertEqual(risultato, 500.0)
+        self.assertEqual(result, 500.0)
 
-    def test_metri_in_km(self):
-        risultato = converti_distanza(1000, "km")
+    def test_meters_to_kilometers(self):
+        result = convert_distance(1000, "km")
 
-        self.assertEqual(risultato, 1.0)
+        self.assertEqual(result, 1.0)
 
-    def test_metri_in_miglia(self):
-        risultato = converti_distanza(1609.344, "mi")
+    def test_meters_to_miles(self):
+        result = convert_distance(1609.344, "mi")
 
-        self.assertAlmostEqual(risultato, 1.0, places=6)
+        self.assertAlmostEqual(result, 1.0, places=6)
 
-    def test_conversione_con_unita_non_valida(self):
+    def test_conversion_with_unsupported_unit(self):
         with self.assertRaises(ValueError):
-            converti_distanza(1000, "yards")
+            convert_distance(1000, "yards")
 
-    def test_conversione_con_distanza_negativa(self):
+    def test_conversion_with_negative_distance(self):
         with self.assertRaises(ValueError):
-            converti_distanza(-1, "km")
+            convert_distance(-1, "km")
 
-    def test_distance_esterna_in_km(self):
-        punto_a = Coordinate(0, 0)
-        punto_b = Coordinate(0, 1)
+    def test_distance_function_in_kilometers(self):
+        point_a = Coordinate(0, 0)
+        point_b = Coordinate(0, 1)
 
-        distanza = distance(punto_a, punto_b, "km")
+        distance_km = distance(point_a, point_b, "km")
 
-        self.assertGreater(distanza, 111.0)
-        self.assertLess(distanza, 112.0)
+        self.assertGreater(distance_km, 111.0)
+        self.assertLess(distance_km, 112.0)
 
-    def test_distance_esterna_unita_default(self):
-        punto_a = Coordinate(0, 0)
-        punto_b = Coordinate(0, 1)
+    def test_distance_function_with_default_unit(self):
+        point_a = Coordinate(0, 0)
+        point_b = Coordinate(0, 1)
 
-        distanza = distance(punto_a, punto_b)
+        distance_km = distance(point_a, point_b)
 
-        self.assertGreater(distanza, 111.0)
-        self.assertLess(distanza, 112.0)
+        self.assertGreater(distance_km, 111.0)
+        self.assertLess(distance_km, 112.0)
 
-    def test_within_radius_esterna(self):
-        punto_a = Coordinate(0, 0)
-        punto_b = Coordinate(0, 1)
+    def test_within_radius_function(self):
+        point_a = Coordinate(0, 0)
+        point_b = Coordinate(0, 1)
 
         self.assertTrue(
-            within_radius(punto_a, punto_b, 112, "km")
+            within_radius(point_a, point_b, 112, "km")
         )
 
         self.assertFalse(
-            within_radius(punto_a, punto_b, 111, "km")
+            within_radius(point_a, point_b, 111, "km")
         )
 
-    def test_distance_esterna_con_punto_non_valido(self):
-        punto = Coordinate(0, 0)
+    def test_distance_function_with_invalid_point(self):
+        point = Coordinate(0, 0)
 
         with self.assertRaises(TypeError):
-            distance(punto, (0, 1), "km")
+            distance(point, (0, 1), "km")
 
     def test_as_tuple(self):
-        punto = Coordinate(39.36336, 16.22622)
+        point = Coordinate(39.36336, 16.22622)
 
-        risultato = punto.restituisci_tupla()
+        result = point.as_tupla()
 
         self.assertEqual(
-            risultato,
+            result,
             (39.36336, 16.22622),
         )
+
 
 if __name__ == "__main__":
     unittest.main()

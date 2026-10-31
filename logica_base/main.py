@@ -1,5 +1,5 @@
 import os
-from core import filtra_punti
+from core import filter_points
 from data_loader import carica_csv, carica_json
 from exif_loader import scansiona_cartella
 from video_loader import scansiona_cartella_video
@@ -92,7 +92,7 @@ def main():
 
     print("Report creato:", percorso_report)
 
-    risultati=filtra_punti(tutti_punti, lat_centro, lon_centro, raggiokm) #faccio il calcolo della distanza
+    risultati=filter_points(tutti_punti, lat_centro, lon_centro, raggiokm) #faccio il calcolo della distanza
 
     if len(risultati)>0: #stampa per test
         print("PROVE DENTRO IL RAGGIO")
