@@ -2,7 +2,17 @@ import csv
 import json
 import math
 
-def crea_punto(lat,lon,nome): #qui stabiliamo se un punto è valido o no
+def create_point(lat,lon,name): 
+    """Validate and create a geographic point tuple.
+
+    Args:
+        latitude: Latitude value between -90 and 90.
+        longitude: Longitude value between -180 and 180.
+        name: Non-empty point name.
+
+    Returns:
+        A tuple in the format (latitude, longitude, name), or None if invalid.
+    """
     try:
         lat=float(lat)  #converto i valori in float (perchè sono stringhe)
         lon=float(lon)
@@ -21,71 +31,94 @@ def crea_punto(lat,lon,nome): #qui stabiliamo se un punto è valido o no
     if not(-180<= lon <= 180): #controllo longitudine
         return None
 
-    if nome is None or not str(nome).strip():
+    if name is None or not str(name).strip():
         return None
 
-    return (lat,lon,nome)
+    return (lat,lon,name)
 
 
 
-def carica_csv(percorso, campo_lat="lat", campo_lon="lon",campo_nome="nome"):
-    punti=[]
-    scartate= 0 #serve per contare le righe che vengono scartate se non rientrano nei parametri
+def load_csv(file_path, latitude_field="lat", longitude_field="lon",name_field="name"):
+    """Load valid geographic points from a CSV file.
+
+    Args:
+        file_path: Path of the CSV file.
+        latitude_field: Name of the latitude column.
+        longitude_field: Name of the longitude column.
+        name_field: Name of the point-name column.
+
+    Returns:
+        A list of valid point tuples.
+    """
+    points=[]
+    discarded_rows= 0 #serve per contare le righe che vengono scartate se non rientrano nei parametri
     try:
-        with open(percorso,newline="", encoding="utf-8") as f:
-            lettore= csv.DictReader(f) #legge file aperto e lo converte in dizionario
-            if not lettore.fieldnames:
-                print("CSV vuoto o senza intestazione")
+        with open(file_path,newline="", encoding="utf-8") as f:
+            reader= csv.DictReader(f) #legge file aperto e lo converte in dizionario
+            if not reader.fieldnames:
+                print("CSV file is empty or has no header")
                 return []
             
-            if campo_lat not in lettore.fieldnames or campo_lon not in lettore.fieldnames:
-                print ("Colonne non trovate: attese", campo_lat, campo_lon, "trovate", lettore.fieldnames)
+            if latitude_field not in reader.fieldnames or longitude_field not in reader.fieldnames:
+                print ("Columns not found: expected", latitude_field, longitude_field, "found", reader.fieldnames)
                 return []
 
-            if campo_nome not in lettore.fieldnames:
-                print("Colonna 'nome' non trovata")
+            if name_field not in reader.fieldnames:
+                print(" 'Name' column not found", name_field)
                 return []
 
-            for riga in lettore:
-                punto=crea_punto(riga[campo_lat],riga[campo_lon],riga[campo_nome])
-                if punto is None:
-                    scartate+=1
+            for row in reader:
+                point=create_point(row[latitude_field],row[longitude_field],row[name_field])
+                if point is None:
+                    discarded_rows+=1
                 else:
-                    punti.append(punto) #se il punto è valido lo aggiungiamo alla lista, questa diventerà il paremtro della funzione filtra punti in core.py
+                    points.append(point) #se il punto è valido lo aggiungiamo alla lista, questa diventerà il paremtro della funzione filtra punti in core.py
+
     except(FileNotFoundError, PermissionError) as e:
-        print("Impossibile leggere il file:", percorso, "-", e)
+        print("Unable to read file:", file_path, "-", e)
         return []
 
-    print("Righe scartate", scartate)
-    return punti
+    print("Discarded rows:", discarded_rows)
+    return points
 
-def carica_json(percorso, campo_lat="lat", campo_lon="lon",campo_nome="nome" ):
-    punti=[]
-    scartate=0
+def load_json(file_path, latitude_field="lat", longitude_field="lon",name_field="name" ):
+    """Load valid geographic points from a JSON file.
+
+    Args:
+        file_path: Path of the JSON file.
+        latitude_field: Name of the latitude property.
+        longitude_field: Name of the longitude property.
+        name_field: Name of the point-name property.
+
+    Returns:
+        A list of valid point tuples.
+    """
+    points=[]
+    discarded_rows=0
     try:
-        with open(percorso, encoding="utf-8") as f:
-            dati=json.load(f)
+        with open(file_path, encoding="utf-8") as f:
+            data=json.load(f)
 
-        if not isinstance(dati, list):
-            print("Il JSON deve contenere una lista di punti")
+        if not isinstance(data, list):
+            print("JSON must contain a list of points")
             return []
 
-        for elemento in dati:
-            if not isinstance(elemento, dict):
-                scartate += 1
+        for item in data:
+            if not isinstance(item, dict):
+                discarded_rows += 1
                 continue
 
-            lat=elemento.get(campo_lat) #qui utilizzo get perchè in caso di dati mancanti o altro restituisce None
-            lon=elemento.get(campo_lon)
-            nome=elemento.get(campo_nome)
+            lat=item.get(latitude_field) #qui utilizzo get perchè in caso di dati mancanti o altro restituisce None
+            lon=item.get(longitude_field)
+            name=item.get(name_field)
 
-            punto=crea_punto(lat,lon,nome)
-            if punto is None:
-                scartate+=1
+            point=create_point(lat,lon,name)
+            if point is None:
+                discarded_rows+=1
             else:
-                punti.append(punto)
+                points.append(point)
     except(FileNotFoundError, PermissionError, json.JSONDecodeError) as e:
-        print("Impossibile leggere il file:", percorso, "-", e)
+        print("Unable to read file:", file_path, "-", e)
         return []
-    print("Righe scartate", scartate)
-    return punti
+    print("Discarded rows:", discarded_rows)
+    return points

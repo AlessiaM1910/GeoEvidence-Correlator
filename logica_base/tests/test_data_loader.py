@@ -1,204 +1,209 @@
 import json
 import os
+import sys
 import tempfile
 import unittest
 
-CARTELLA_LOGICA = os.path.dirname(
+
+LOGIC_DIRECTORY = os.path.dirname(
     os.path.dirname(
         os.path.abspath(__file__)
     )
 )
 
-if CARTELLA_LOGICA not in os.sys.path:
-    os.sys.path.insert(0, CARTELLA_LOGICA)
+if LOGIC_DIRECTORY not in sys.path:
+    sys.path.insert(0, LOGIC_DIRECTORY)
+
 
 from data_loader import (
-    crea_punto,
-    carica_csv,
-    carica_json,
+    create_point,
+    load_csv,
+    load_json,
 )
 
 
 class TestDataLoader(unittest.TestCase):
+    """Test CSV and JSON geographic point loading."""
 
-    def crea_file_temporaneo(self, contenuto, suffisso):
-        descrittore, percorso = tempfile.mkstemp(
-            suffix=suffisso,
+    def create_temporary_file(self, content, suffix):
+        """Create a temporary UTF-8 text file for a test."""
+        descriptor, file_path = tempfile.mkstemp(
+            suffix=suffix,
         )
 
-        os.close(descrittore)
+        os.close(descriptor)
 
         with open(
-            percorso,
+            file_path,
             "w",
             encoding="utf-8",
             newline="",
-        ) as file_temporaneo:
-            file_temporaneo.write(contenuto)
+        ) as temporary_file:
+            temporary_file.write(content)
 
-        self.addCleanup(os.remove, percorso)
+        self.addCleanup(os.remove, file_path)
 
-        return percorso
+        return file_path
 
-    def test_crea_punto_valido(self):
-        punto = crea_punto(
+    def test_create_valid_point(self):
+        point = create_point(
             "39.36336",
             "16.22622",
-            "Foto test",
+            "Test photo",
         )
 
         self.assertEqual(
-            punto,
-            (39.36336, 16.22622, "Foto test"),
+            point,
+            (39.36336, 16.22622, "Test photo"),
         )
 
-    def test_crea_punto_coordinate_non_numeriche(self):
-        punto = crea_punto(
-            "testo",
+    def test_create_point_with_non_numeric_coordinates(self):
+        point = create_point(
+            "text",
             "16.22622",
-            "Punto non valido",
+            "Invalid point",
         )
 
-        self.assertIsNone(punto)
+        self.assertIsNone(point)
 
-    def test_crea_punto_coordinate_fuori_range(self):
-        punto = crea_punto(
+    def test_create_point_with_out_of_range_coordinates(self):
+        point = create_point(
             91,
             16.22622,
-            "Punto non valido",
+            "Invalid point",
         )
 
-        self.assertIsNone(punto)
+        self.assertIsNone(point)
 
-    def test_crea_punto_nan(self):
-        punto = crea_punto(
+    def test_create_point_with_nan(self):
+        point = create_point(
             float("nan"),
             16.22622,
-            "Punto non valido",
+            "Invalid point",
         )
 
-        self.assertIsNone(punto)
+        self.assertIsNone(point)
 
-    def test_crea_punto_nome_vuoto(self):
-        punto = crea_punto(
+    def test_create_point_with_empty_name(self):
+        point = create_point(
             39.36336,
             16.22622,
             "   ",
         )
 
-        self.assertIsNone(punto)
+        self.assertIsNone(point)
 
-    def test_carica_csv_valido(self):
-        contenuto = (
-            "lat,lon,nome\n"
-            "39.36336,16.22622,Foto A\n"
-            "39.43231,16.22741,Foto B\n"
+    def test_load_valid_csv(self):
+        content = (
+            "lat,lon,name\n"
+            "39.36336,16.22622,Photo A\n"
+            "39.43231,16.22741,Photo B\n"
         )
 
-        percorso = self.crea_file_temporaneo(
-            contenuto,
+        file_path = self.create_temporary_file(
+            content,
             ".csv",
         )
 
-        punti = carica_csv(percorso)
+        points = load_csv(file_path)
 
         self.assertEqual(
-            punti,
+            points,
             [
-                (39.36336, 16.22622, "Foto A"),
-                (39.43231, 16.22741, "Foto B"),
+                (39.36336, 16.22622, "Photo A"),
+                (39.43231, 16.22741, "Photo B"),
             ],
         )
 
-    def test_carica_csv_scartando_righe_non_valide(self):
-        contenuto = (
-            "lat,lon,nome\n"
-            "39.36336,16.22622,Valido\n"
-            "91,16.22622,Latitudine fuori range\n"
-            "testo,16.22622,Coordinate non numeriche\n"
+    def test_load_csv_discards_invalid_rows(self):
+        content = (
+            "lat,lon,name\n"
+            "39.36336,16.22622,Valid\n"
+            "91,16.22622,Latitude out of range\n"
+            "text,16.22622,Non-numeric coordinates\n"
             "39.36336,16.22622,\n"
         )
 
-        percorso = self.crea_file_temporaneo(
-            contenuto,
+        file_path = self.create_temporary_file(
+            content,
             ".csv",
         )
 
-        punti = carica_csv(percorso)
+        points = load_csv(file_path)
 
         self.assertEqual(
-            punti,
+            points,
             [
-                (39.36336, 16.22622, "Valido"),
+                (39.36336, 16.22622, "Valid"),
             ],
         )
 
-    def test_carica_csv_colonna_mancante(self):
-        contenuto = (
-            "lat,nome\n"
-            "39.36336,Foto A\n"
+    def test_load_csv_with_missing_column(self):
+        content = (
+            "lat,name\n"
+            "39.36336,Photo A\n"
         )
 
-        percorso = self.crea_file_temporaneo(
-            contenuto,
+        file_path = self.create_temporary_file(
+            content,
             ".csv",
         )
 
-        punti = carica_csv(percorso)
+        points = load_csv(file_path)
 
-        self.assertEqual(punti, [])
+        self.assertEqual(points, [])
 
-    def test_carica_csv_file_inesistente(self):
-        punti = carica_csv(
-            "file_csv_inesistente.csv"
+    def test_load_csv_with_missing_file(self):
+        points = load_csv(
+            "missing_csv_file.csv"
         )
 
-        self.assertEqual(punti, [])
+        self.assertEqual(points, [])
 
-    def test_carica_json_valido(self):
-        contenuto = json.dumps(
+    def test_load_valid_json(self):
+        content = json.dumps(
             [
                 {
                     "lat": 39.36336,
                     "lon": 16.22622,
-                    "nome": "Foto A",
+                    "name": "Photo A",
                 },
                 {
                     "lat": 39.43231,
                     "lon": 16.22741,
-                    "nome": "Foto B",
+                    "name": "Photo B",
                 },
             ]
         )
 
-        percorso = self.crea_file_temporaneo(
-            contenuto,
+        file_path = self.create_temporary_file(
+            content,
             ".json",
         )
 
-        punti = carica_json(percorso)
+        points = load_json(file_path)
 
         self.assertEqual(
-            punti,
+            points,
             [
-                (39.36336, 16.22622, "Foto A"),
-                (39.43231, 16.22741, "Foto B"),
+                (39.36336, 16.22622, "Photo A"),
+                (39.43231, 16.22741, "Photo B"),
             ],
         )
 
-    def test_carica_json_scartando_elementi_non_validi(self):
-        contenuto = json.dumps(
+    def test_load_json_discards_invalid_items(self):
+        content = json.dumps(
             [
                 {
                     "lat": 39.36336,
                     "lon": 16.22622,
-                    "nome": "Valido",
+                    "name": "Valid",
                 },
-                "elemento non dizionario",
+                "not a dictionary",
                 {
                     "lat": 91,
                     "lon": 16.22622,
-                    "nome": "Latitudine fuori range",
+                    "name": "Latitude out of range",
                 },
                 {
                     "lat": 39.36336,
@@ -207,52 +212,52 @@ class TestDataLoader(unittest.TestCase):
             ]
         )
 
-        percorso = self.crea_file_temporaneo(
-            contenuto,
+        file_path = self.create_temporary_file(
+            content,
             ".json",
         )
 
-        punti = carica_json(percorso)
+        points = load_json(file_path)
 
         self.assertEqual(
-            punti,
+            points,
             [
-                (39.36336, 16.22622, "Valido"),
+                (39.36336, 16.22622, "Valid"),
             ],
         )
 
-    def test_carica_json_radice_non_lista(self):
-        contenuto = json.dumps(
+    def test_load_json_with_non_list_root(self):
+        content = json.dumps(
             {
                 "lat": 39.36336,
                 "lon": 16.22622,
-                "nome": "Non e una lista",
+                "name": "Not a list",
             }
         )
 
-        percorso = self.crea_file_temporaneo(
-            contenuto,
+        file_path = self.create_temporary_file(
+            content,
             ".json",
         )
 
-        punti = carica_json(percorso)
+        points = load_json(file_path)
 
-        self.assertEqual(punti, [])
+        self.assertEqual(points, [])
 
-    def test_carica_json_non_valido(self):
-        contenuto = (
+    def test_load_invalid_json(self):
+        content = (
             "["
             "{\"lat\": 39.36336,"
         )
 
-        percorso = self.crea_file_temporaneo(
-            contenuto,
+        file_path = self.create_temporary_file(
+            content,
             ".json",
         )
 
-        punti = carica_json(percorso)
+        points = load_json(file_path)
 
-        self.assertEqual(punti, [])
+        self.assertEqual(points, [])
 
 
 if __name__ == "__main__":
