@@ -3,19 +3,19 @@ import sys
 import unittest
 
 
-CARTELLA_LOGICA = os.path.dirname(
+LOGIC_DIRECTORY = os.path.dirname(
     os.path.dirname(
         os.path.abspath(__file__)
     )
 )
 
-RADICE_PROGETTO = os.path.dirname(CARTELLA_LOGICA)
+PROJECT_ROOT = os.path.dirname(LOGIC_DIRECTORY)
 
-if CARTELLA_LOGICA not in sys.path:
-    sys.path.insert(0, CARTELLA_LOGICA)
+if LOGIC_DIRECTORY not in sys.path:
+    sys.path.insert(0, LOGIC_DIRECTORY)
 
 
-from exif_loader import scansiona_cartella
+from exif_loader import scan_image_directory
 from video_loader import scansiona_cartella_video
 from report import (
     classifica_reperti,
@@ -26,78 +26,81 @@ from report import (
 
 @unittest.skipUnless(
     os.environ.get("EXIFTOOL_PATH"),
-    "EXIFTOOL_PATH non impostata",
+    "EXIFTOOL_PATH is not set",
 )
-class TestIntegrazioneMedia(unittest.TestCase):
+class TestMediaIntegration(unittest.TestCase):
+    """Test combined image and video geographic evidence."""
 
-    def test_foto_e_video_confluiscono_nello_stesso_report(self):
-        cartella_foto = os.path.join(
-            RADICE_PROGETTO,
+    def test_images_and_videos_are_added_to_the_same_report(self):
+        image_directory = os.path.join(
+            PROJECT_ROOT,
             "dati_test",
             "exif_sintetici",
             "immagini",
         )
 
-        cartella_video = os.path.join(
-            RADICE_PROGETTO,
+        video_directory = os.path.join(
+            PROJECT_ROOT,
             "dati_test",
             "video_sintetici",
             "video",
         )
 
-        foto = scansiona_cartella(cartella_foto)
+        image_results = scan_image_directory(
+            image_directory
+        )
 
-        video = scansiona_cartella_video(
-            cartella_video,
+        video_results = scansiona_cartella_video(
+            video_directory,
             os.environ["EXIFTOOL_PATH"],
         )
 
-        evidenze = (
-            evidenze_da_foto(foto)
-            + evidenze_da_video(video)
+        evidence = (
+            evidenze_da_foto(image_results)
+            + evidenze_da_video(video_results)
         )
 
-        righe_report = classifica_reperti(
-            evidenze,
+        report_rows = classifica_reperti(
+            evidence,
             39.375155,
             16.271693,
             1,
         )
 
-        righe_per_nome = {}
+        rows_by_name = {}
 
-        for riga in righe_report:
-            righe_per_nome[riga["nome_evidenza"]] = riga
+        for row in report_rows:
+            rows_by_name[row["nome_evidenza"]] = row
 
-        self.assertEqual(len(righe_report), 3)
+        self.assertEqual(len(report_rows), 3)
 
-        self.assertIn("con_gps.mp4", righe_per_nome)
+        self.assertIn("con_gps.mp4", rows_by_name)
         self.assertEqual(
-            righe_per_nome["con_gps.mp4"]["tipo"],
+            rows_by_name["con_gps.mp4"]["tipo"],
             "video",
         )
         self.assertEqual(
-            righe_per_nome["con_gps.mp4"]["fonte"],
+            rows_by_name["con_gps.mp4"]["fonte"],
             "ExifTool",
         )
         self.assertEqual(
-            righe_per_nome["con_gps.mp4"]["esito"],
+            rows_by_name["con_gps.mp4"]["esito"],
             "DENTRO_RAGGIO",
         )
 
-        self.assertIn("dentro_001.jpg", righe_per_nome)
+        self.assertIn("dentro_001.jpg", rows_by_name)
         self.assertEqual(
-            righe_per_nome["dentro_001.jpg"]["tipo"],
+            rows_by_name["dentro_001.jpg"]["tipo"],
             "foto",
         )
         self.assertEqual(
-            righe_per_nome["dentro_001.jpg"]["esito"],
+            rows_by_name["dentro_001.jpg"]["esito"],
             "DENTRO_RAGGIO",
         )
 
-        self.assertIn("fuori_001.jpg", righe_per_nome)
+        self.assertIn("fuori_001.jpg", rows_by_name)
         self.assertEqual(
-            righe_per_nome["fuori_001.jpg"]["esito"],
+            rows_by_name["fuori_001.jpg"]["esito"],
             "FUORI_RAGGIO",
         )
 

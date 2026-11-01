@@ -6,175 +6,181 @@ import unittest
 from contextlib import redirect_stdout
 
 
-CARTELLA_LOGICA = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOGIC_DIRECTORY = os.path.dirname(
+    os.path.dirname(
+        os.path.abspath(__file__)
+    )
+)
 
-CARTELLA_ROOT = os.path.dirname(CARTELLA_LOGICA)
+PROJECT_ROOT = os.path.dirname(LOGIC_DIRECTORY)
 
-if CARTELLA_LOGICA not in sys.path:
-    sys.path.insert(0, CARTELLA_LOGICA)
-
-from exif_loader import scansiona_cartella
-from report import evidenze_da_foto, classifica_reperti
+if LOGIC_DIRECTORY not in sys.path:
+    sys.path.insert(0, LOGIC_DIRECTORY)
 
 
-CARTELLA_IMMAGINI = os.path.join(
-    CARTELLA_ROOT,
+from exif_loader import scan_image_directory
+from report import classifica_reperti, evidenze_da_foto
+
+
+TEST_IMAGES_DIRECTORY = os.path.join(
+    PROJECT_ROOT,
     "dati_test",
     "exif_sintetici",
     "immagini",
 )
 
-PERCORSO_MANIFEST = os.path.join(
-    CARTELLA_ROOT,
+MANIFEST_PATH = os.path.join(
+    PROJECT_ROOT,
     "dati_test",
     "exif_sintetici",
     "manifest.json",
 )
 
-LAT_CENTRO = 39.36336
-LON_CENTRO = 16.22622
-RAGGIO_KM = 5.0
+CENTER_LATITUDE = 39.36336
+CENTER_LONGITUDE = 16.22622
+RADIUS_KM = 5.0
 
 
-class TestDatasetSintetico(unittest.TestCase):
+class TestSyntheticDataset(unittest.TestCase):
+    """Test expected outcomes for the synthetic image dataset."""
 
     @classmethod
     def setUpClass(cls):
         with open(
-            PERCORSO_MANIFEST,
+            MANIFEST_PATH,
             "r",
             encoding="utf-8",
-        ) as file_manifest:
-            cls.manifest = json.load(file_manifest)
+        ) as manifest_file:
+            cls.manifest = json.load(manifest_file)
 
-    def test_manifest_contiene_5_reperti(self):
+    def test_manifest_contains_five_records(self):
         self.assertEqual(len(self.manifest), 5)
 
-        categorie = {}
+        categories = {}
 
         for record in self.manifest:
-            categoria = record["categoria"]
+            category = record["categoria"]
 
-            if categoria not in categorie:
-                categorie[categoria] = 0
+            if category not in categories:
+                categories[category] = 0
 
-            categorie[categoria] += 1
+            categories[category] += 1
 
         self.assertEqual(
-            categorie["gps_valido_dentro"],
+            categories["gps_valido_dentro"],
             1,
         )
 
         self.assertEqual(
-            categorie["gps_valido_fuori"],
+            categories["gps_valido_fuori"],
             1,
         )
 
         self.assertEqual(
-            categorie["senza_gps"],
+            categories["senza_gps"],
             1,
         )
 
         self.assertEqual(
-            categorie["gps_incompleto"],
+            categories["gps_incompleto"],
             1,
         )
 
         self.assertEqual(
-            categorie["file_corrotto"],
+            categories["file_corrotto"],
             1,
         )
 
-    def test_estrazione_exif_restituisce_2_gps_validi(self):
+    def test_exif_extraction_returns_two_valid_gps_results(self):
         output = io.StringIO()
 
         with redirect_stdout(output):
-            foto = scansiona_cartella(
-                CARTELLA_IMMAGINI
+            image_results = scan_image_directory(
+                TEST_IMAGES_DIRECTORY
             )
 
-        statistiche = output.getvalue()
+        statistics = output.getvalue()
 
-        self.assertEqual(len(foto), 2)
+        self.assertEqual(len(image_results), 2)
 
         self.assertIn(
-            "File candidati: 5",
-            statistiche,
+            "Candidate files: 5",
+            statistics,
         )
 
         self.assertIn(
-            "Foto con GPS valido: 2",
-            statistiche,
+            "Images with valid GPS: 2",
+            statistics,
         )
 
         self.assertIn(
-            "Foto senza GPS: 1",
-            statistiche,
+            "Images without GPS: 1",
+            statistics,
         )
 
         self.assertIn(
-            "Foto con GPS non valido: 1",
-            statistiche,
+            "Images with invalid GPS: 1",
+            statistics,
         )
 
         self.assertIn(
-            "File non leggibili/corrotti: 1",
-            statistiche,
+            "Unreadable or corrupt images: 1",
+            statistics,
         )
 
-    def test_classificazione_corrisponde_al_manifest(self):
+    def test_classification_matches_manifest(self):
         with redirect_stdout(io.StringIO()):
-            foto = scansiona_cartella(
-                CARTELLA_IMMAGINI
+            image_results = scan_image_directory(
+                TEST_IMAGES_DIRECTORY
             )
 
-        righe = classifica_reperti(
-            evidenze_da_foto(foto),
-            LAT_CENTRO,
-            LON_CENTRO,
-            RAGGIO_KM,
+        report_rows = classifica_reperti(
+            evidenze_da_foto(image_results),
+            CENTER_LATITUDE,
+            CENTER_LONGITUDE,
+            RADIUS_KM,
         )
 
-        esiti_attesi = {}
+        expected_results = {}
 
         for record in self.manifest:
             if record["esito_atteso"] in (
                 "DENTRO_RAGGIO",
                 "FUORI_RAGGIO",
             ):
-                esiti_attesi[record["nome_file"]] = (
+                expected_results[record["nome_file"]] = (
                     record["esito_atteso"]
                 )
 
-        self.assertEqual(len(righe), 2)
-        self.assertEqual(len(esiti_attesi), 2)
+        self.assertEqual(len(report_rows), 2)
+        self.assertEqual(len(expected_results), 2)
 
-        for riga in righe:
-            nome_file = os.path.basename(
-                riga["nome_evidenza"]
+        for row in report_rows:
+            filename = os.path.basename(
+                row["nome_evidenza"]
             )
 
-            self.assertIn(nome_file, esiti_attesi)
+            self.assertIn(filename, expected_results)
 
             self.assertEqual(
-                riga["esito"],
-                esiti_attesi[nome_file],
+                row["esito"],
+                expected_results[filename],
             )
 
-        numero_dentro = sum(
+        inside_count = sum(
             1
-            for riga in righe
-            if riga["esito"] == "DENTRO_RAGGIO"
+            for row in report_rows
+            if row["esito"] == "DENTRO_RAGGIO"
         )
 
-        numero_fuori = sum(
+        outside_count = sum(
             1
-            for riga in righe
-            if riga["esito"] == "FUORI_RAGGIO"
+            for row in report_rows
+            if row["esito"] == "FUORI_RAGGIO"
         )
 
-        self.assertEqual(numero_dentro, 1)
-        self.assertEqual(numero_fuori, 1)
+        self.assertEqual(inside_count, 1)
+        self.assertEqual(outside_count, 1)
 
 
 if __name__ == "__main__":

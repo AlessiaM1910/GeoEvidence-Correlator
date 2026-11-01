@@ -1,7 +1,7 @@
 import os
 from core import filter_points
 from data_loader import load_csv, load_json
-from exif_loader import scansiona_cartella
+from exif_loader import scan_image_directory
 from video_loader import scansiona_cartella_video
 from report import (classifica_reperti,evidenze_da_foto,evidenze_da_video,evidenze_da_punti,scrivi_report_csv)
 
@@ -57,7 +57,7 @@ def main():
 
     punti_csv=load_csv(percorso_csv)
     punti_json=load_json(percorso_json)
-    evidenze_foto = scansiona_cartella(cartella_foto)
+    evidenze_foto = scan_image_directory(cartella_foto)
     evidenze_video = scansiona_cartella_video(cartella_video,percorso_exiftool)
 
     punti_foto = []  #qui effettuiamo conversione nel formato richiesto dalla funzione filtra punti

@@ -4,36 +4,37 @@ import sys
 import unittest
 
 
-CARTELLA_LOGICA = os.path.dirname(
+LOGIC_DIRECTORY = os.path.dirname(
     os.path.dirname(
         os.path.abspath(__file__)
     )
 )
 
-CARTELLA_ROOT = os.path.dirname(CARTELLA_LOGICA)
+PROJECT_ROOT = os.path.dirname(LOGIC_DIRECTORY)
 
-if CARTELLA_LOGICA not in sys.path:
-    sys.path.insert(0, CARTELLA_LOGICA)
+if LOGIC_DIRECTORY not in sys.path:
+    sys.path.insert(0, LOGIC_DIRECTORY)
+
 
 from exif_loader import (
-    FotoNonLeggibileError,
-    calcola_emisfero,
-    converti_in_decimale,
-    estrai_exif,
-    estrai_gps_info,
-    estrai_timestamp,
+    UnreadableImageError,
+    apply_hemisphere,
+    dms_to_decimal,
+    extract_exif,
+    extract_gps_info,
+    extract_timestamp,
 )
 
 
-CARTELLA_IMMAGINI = os.path.join(
-    CARTELLA_ROOT,
+TEST_IMAGES_DIRECTORY = os.path.join(
+    PROJECT_ROOT,
     "dati_test",
     "exif_sintetici",
     "immagini",
 )
 
-PERCORSO_MANIFEST = os.path.join(
-    CARTELLA_ROOT,
+MANIFEST_PATH = os.path.join(
+    PROJECT_ROOT,
     "dati_test",
     "exif_sintetici",
     "manifest.json",
@@ -41,88 +42,94 @@ PERCORSO_MANIFEST = os.path.join(
 
 
 class TestExifLoader(unittest.TestCase):
+    """Test EXIF extraction from the synthetic image dataset."""
 
     @classmethod
     def setUpClass(cls):
         with open(
-            PERCORSO_MANIFEST,
+            MANIFEST_PATH,
             "r",
             encoding="utf-8",
-        ) as file_manifest:
-            manifest = json.load(file_manifest)
+        ) as manifest_file:
+            manifest = json.load(manifest_file)
 
-        cls.record_per_nome = {}
+        cls.records_by_filename = {}
 
         for record in manifest:
-            cls.record_per_nome[record["nome_file"]] = record
+            cls.records_by_filename[
+                record["nome_file"]
+            ] = record
 
-    def percorso_immagine(self, nome_file):
+    def image_path(self, filename):
+        """Return the absolute path of a synthetic test image."""
         return os.path.join(
-            CARTELLA_IMMAGINI,
-            nome_file,
+            TEST_IMAGES_DIRECTORY,
+            filename,
         )
 
-    def test_foto_con_gps_valido(self):
-        nome_file = "dentro_001.jpg"
+    def test_image_with_valid_gps(self):
+        filename = "dentro_001.jpg"
 
-        dati_exif = estrai_exif(
-            self.percorso_immagine(nome_file)
+        exif_data = extract_exif(
+            self.image_path(filename)
         )
 
-        gps_info = estrai_gps_info(dati_exif)
+        gps_info = extract_gps_info(exif_data)
 
-        latitudine = calcola_emisfero(
-            converti_in_decimale(
+        latitude = apply_hemisphere(
+            dms_to_decimal(
                 gps_info["GPSLatitude"]
             ),
             gps_info["GPSLatitudeRef"],
-            "latitudine",
+            "latitude",
         )
 
-        longitudine = calcola_emisfero(
-            converti_in_decimale(
+        longitude = apply_hemisphere(
+            dms_to_decimal(
                 gps_info["GPSLongitude"]
             ),
             gps_info["GPSLongitudeRef"],
-            "longitudine",
+            "longitude",
         )
 
-        record_atteso = self.record_per_nome[nome_file]
+        expected_record = self.records_by_filename[
+            filename
+        ]
 
         self.assertAlmostEqual(
-            latitudine,
-            record_atteso["lat"],
+            latitude,
+            expected_record["lat"],
             places=5,
         )
 
         self.assertAlmostEqual(
-            longitudine,
-            record_atteso["lon"],
+            longitude,
+            expected_record["lon"],
             places=5,
         )
 
         self.assertEqual(
-            estrai_timestamp(dati_exif),
-            record_atteso["timestamp"],
+            extract_timestamp(exif_data),
+            expected_record["timestamp"],
         )
 
-    def test_foto_senza_gps(self):
-        dati_exif = estrai_exif(
-            self.percorso_immagine("senza_gps_001.jpg")
+    def test_image_without_gps(self):
+        exif_data = extract_exif(
+            self.image_path("senza_gps_001.jpg")
         )
 
-        gps_info = estrai_gps_info(dati_exif)
+        gps_info = extract_gps_info(exif_data)
 
         self.assertFalse(gps_info)
 
-    def test_foto_con_gps_incompleto(self):
-        dati_exif = estrai_exif(
-            self.percorso_immagine(
+    def test_image_with_incomplete_gps(self):
+        exif_data = extract_exif(
+            self.image_path(
                 "gps_incompleto_001.jpg"
             )
         )
 
-        gps_info = estrai_gps_info(dati_exif)
+        gps_info = extract_gps_info(exif_data)
 
         self.assertIsNotNone(gps_info)
 
@@ -136,10 +143,10 @@ class TestExifLoader(unittest.TestCase):
             gps_info,
         )
 
-    def test_file_corrotto_non_legibile(self):
-        with self.assertRaises(FotoNonLeggibileError):
-            estrai_exif(
-                self.percorso_immagine("corrotto_001.jpg")
+    def test_unreadable_corrupt_image(self):
+        with self.assertRaises(UnreadableImageError):
+            extract_exif(
+                self.image_path("corrotto_001.jpg")
             )
 
 
