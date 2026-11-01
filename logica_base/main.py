@@ -1,116 +1,135 @@
 import os
+
 from core import filter_points
 from data_loader import load_csv, load_json
 from exif_loader import scan_image_directory
+from report import (classify_evidence,evidence_from_images,evidence_from_points,evidence_from_videos,write_csv_report)
 from video_loader import scan_video_directory
-from report import (classify_evidence,evidence_from_images,evidence_from_videos,evidence_from_points,write_csv_report)
 
 
+def request_search_parameters():
+    """Request and validate the geographic search center and radius.
 
-def chiedi_parametri_ricerca(): #valori test usati: lat 41.8902 , long 12.4922. raggio 5 
+    Returns:
+        A tuple containing center latitude, center longitude and radius in km.
+    """
     while True:
         try:
-            lat_centro = float(input("Latitudine del centro: "))
-            if not (-90 <= lat_centro <= 90): #se metto valori duori dal range chiede di nuovo di reinserirlo
-                print("Latitudine non valida, deve essere compresa tra -90 e 90")
-                continue
-            lon_centro = float(input("Longitudine del centro: "))
-            if not (-180 <= lon_centro <= 180):
-                print("Longitudine non valida, deve essere compresa tra -180 e 180")
-                continue
-            raggiokm = float(input("Raggio di ricerca (km): "))
-            if raggiokm < 0:
-                print("Il raggio deve essere maggiore di zero")
+            center_latitude = float(input("Center latitude: "))
+
+            if not (-90 <= center_latitude <= 90):
+                print("Invalid latitude. It must be between -90 and 90.")
                 continue
 
-            return lat_centro, lon_centro, raggiokm
+            center_longitude = float(input("Center longitude: "))
+
+            if not (-180 <= center_longitude <= 180):
+                print("Invalid longitude. It must be between -180 and 180.")
+                continue
+
+            radius_km = float(input("Search radius (km): "))
+
+            if radius_km < 0:
+                print("Radius must be zero or greater.")
+                continue
+
+            return (center_latitude,center_longitude,radius_km)
 
         except ValueError:
-            print("Inserire numeri validi")
+            print("Enter valid numeric values.")
+
 
 def main():
-    cartella = os.path.dirname(os.path.abspath(__file__))
-    radice_progetto = os.path.dirname(cartella)
+    """Load evidence, classify it by radius and create a CSV report."""
+    logic_directory = os.path.dirname(os.path.abspath(__file__))
 
-    percorso_csv = os.path.join(cartella, "punti.csv")
-    percorso_json = os.path.join(cartella, "punti.json")
+    project_root = os.path.dirname(logic_directory)
 
-    cartella_foto = os.path.join(
-        radice_progetto,
-        "dati_test",
-        "exif_sintetici",
-        "immagini",
-    )
+    csv_path = os.path.join(logic_directory,"punti.csv")
 
-    cartella_video = os.path.join(
-        radice_progetto,
-        "dati_test",
-        "video_sintetici",
-        "video",
-    )
+    json_path = os.path.join(logic_directory,"punti.json")
 
-    percorso_exiftool = os.environ.get("EXIFTOOL_PATH")
+    image_directory = os.path.join(project_root,"dati_test","exif_sintetici","immagini")
 
-    if not percorso_exiftool:
-        print("Imposta la variabile EXIFTOOL_PATH prima di eseguire il programma.")
+    video_directory = os.path.join(project_root,"dati_test","video_sintetici","video")
+
+    exiftool_path = os.environ.get("EXIFTOOL_PATH")
+
+    if not exiftool_path:
+        print("Set EXIFTOOL_PATH before running the program.")
         return
 
-    punti_csv=load_csv(percorso_csv)
-    punti_json=load_json(percorso_json)
-    evidenze_foto = scan_image_directory(cartella_foto)
-    evidenze_video = scan_video_directory(cartella_video,percorso_exiftool)
+    csv_points = load_csv(csv_path)
+    json_points = load_json(json_path)
 
-    punti_foto = []  #qui effettuiamo conversione nel formato richiesto dalla funzione filtra punti
+    image_results = scan_image_directory(image_directory)
 
-    for lat, lon, percorso_relativo, timestamp in evidenze_foto:
-        punti_foto.append((lat, lon, percorso_relativo))
+    video_results = scan_video_directory(video_directory,exiftool_path)
 
-    print("Foto con GPS caricate:", len(punti_foto))
+    image_points = []
 
-    punti_video = [] #qua carichiamo punti video
+    for latitude, longitude, relative_path, timestamp in image_results:
+        image_points.append((latitude,longitude,relative_path,))
 
-    for lat, lon, percorso_relativo, timestamp in evidenze_video:
-        punti_video.append((lat, lon, percorso_relativo))
+    print("Images with GPS loaded:",len(image_points))
 
-    print("Video con GPS caricati:", len(punti_video))
+    video_points = []
 
-    tutti_punti=punti_csv + punti_json + punti_foto + punti_video #questo rimane utile per la funzione filtra punti
+    for latitude, longitude, relative_path, timestamp in video_results:
+        video_points.append((latitude,longitude,relative_path))
 
-    evidenze_report= evidence_from_points(punti_csv,"CSV") + evidence_from_points(punti_json, "JSON") + evidence_from_images(evidenze_foto) + evidence_from_videos(evidenze_video) #contiene tutte le informazioni che servono nel CSV
+    print("Videos with GPS loaded:",len(video_points))
 
-    if len(tutti_punti)== 0:
-        print("Nessun punto caricato")
+    all_points = (csv_points + json_points + image_points + video_points)
+
+    report_evidence = (
+        evidence_from_points(csv_points, "CSV")
+        + evidence_from_points(json_points, "JSON")
+        + evidence_from_images(image_results)
+        + evidence_from_videos(video_results)
+    )
+
+    if not all_points:
+        print("No points loaded.")
         return
 
-    lat_centro, lon_centro, raggiokm= chiedi_parametri_ricerca() #prendo i parametri da input
+    (center_latitude,center_longitude,radius_km) = request_search_parameters()
 
-    righe_report = classify_evidence(evidenze_report,lat_centro,lon_centro,raggiokm)
+    report_rows = classify_evidence(
+        report_evidence,
+        center_latitude,
+        center_longitude,
+        radius_km,
+    )
 
-    percorso_report = os.path.join(cartella,"report_geoevidence.csv")
+    report_path = os.path.join(logic_directory,"report_geoevidence.csv")
 
-    write_csv_report(percorso_report,righe_report)
+    write_csv_report(report_path,report_rows)
 
-    print("Report creato:", percorso_report)
+    print("Report created:", report_path)
 
-    risultati=filter_points(tutti_punti, lat_centro, lon_centro, raggiokm) #faccio il calcolo della distanza
+    results = filter_points(
+        all_points,
+        center_latitude,
+        center_longitude,
+        radius_km,
+    )
 
-    if len(risultati)>0: #stampa per test
-        print("PROVE DENTRO IL RAGGIO")
-        for nome,distanza in risultati:
-            if distanza < 1:
-                print("[DENTRO]", nome, "a", round(distanza * 1000, 1),"m")  #se la distanza è ingferiore a 1km la stampiamo in metri
+    if results:
+        print("EVIDENCE INSIDE RADIUS")
+
+        for name, distance_km in results:
+            if distance_km < 1:
+                print("[INSIDE]",name,"at",round(distance_km * 1000, 1),"m",)
             else:
-                print("[DENTRO]", nome, "a", round(distanza, 3), "km")
+                print("[INSIDE]",name,"at",round(distance_km, 3),"km")
     else:
-        print("Nessuna evidenza trovata")
+        print("No evidence found inside radius.")
 
-    fuori_raggio = len(tutti_punti) - len(risultati)
+    outside_radius_count = len(all_points) - len(results)
 
-    print("Numero evidenze fuori raggio:", fuori_raggio)
+    print("Evidence outside radius:",outside_radius_count)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()
-
-
-
-
