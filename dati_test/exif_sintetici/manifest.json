@@ -1,42 +1,42 @@
 [
     {
-        "nome_file": "dentro_001.jpg",
-        "categoria": "gps_valido_dentro",
+        "filename": "dentro_001.jpg",
+        "category": "valid_gps_inside",
         "lat": 39.37515500455648,
         "lon": 16.271693014503285,
         "timestamp": "2026:01:01 10:01:00",
-        "esito_atteso": "DENTRO_RAGGIO"
+        "expected_result": "INSIDE_RADIUS"
     },
     {
-        "nome_file": "fuori_001.jpg",
-        "categoria": "gps_valido_fuori",
+        "filename": "fuori_001.jpg",
+        "category": "valid_gps_outside",
         "lat": 39.37128007564969,
         "lon": 16.16004776056218,
         "timestamp": "2026:01:01 10:41:00",
-        "esito_atteso": "FUORI_RAGGIO"
+        "expected_result": "OUTSIDE_RADIUS"
     },
     {
-        "nome_file": "senza_gps_001.jpg",
-        "categoria": "senza_gps",
+        "filename": "senza_gps_001.jpg",
+        "category": "without_gps",
         "lat": null,
         "lon": null,
         "timestamp": "2026:01:01 11:16:00",
-        "esito_atteso": "SENZA_GPS"
+        "expected_result": "NO_GPS"
     },
     {
-        "nome_file": "gps_incompleto_001.jpg",
-        "categoria": "gps_incompleto",
+        "filename": "gps_incompleto_001.jpg",
+        "category": "incomplete_gps",
         "lat": null,
         "lon": null,
         "timestamp": "2026:01:01 11:26:00",
-        "esito_atteso": "GPS_NON_VALIDO"
+        "expected_result": "INVALID_GPS"
     },
     {
-        "nome_file": "corrotto_001.jpg",
-        "categoria": "file_corrotto",
+        "filename": "corrotto_001.jpg",
+        "category": "corrupt_file",
         "lat": null,
         "lon": null,
         "timestamp": null,
-        "esito_atteso": "NON_LEGGIBILE"
+        "expected_result": "UNREADABLE"
     }
 ]

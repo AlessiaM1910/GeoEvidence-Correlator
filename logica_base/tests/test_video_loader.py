@@ -5,30 +5,31 @@ import unittest
 from unittest.mock import Mock, patch
 
 
-CARTELLA_LOGICA = os.path.dirname(
+LOGIC_DIRECTORY = os.path.dirname(
     os.path.dirname(
         os.path.abspath(__file__)
     )
 )
 
-if CARTELLA_LOGICA not in sys.path:
-    sys.path.insert(0, CARTELLA_LOGICA)
+if LOGIC_DIRECTORY not in sys.path:
+    sys.path.insert(0, LOGIC_DIRECTORY)
 
 
 from video_loader import (
-    ExifToolNonDisponibileError,
-    VideoNonLeggibileError,
-    converti_coordinata_decimale,
-    estrai_gps_info_video,
-    estrai_metadati_video,
-    estrai_timestamp_video,
+    ExifToolUnavailableError,
+    UnreadableVideoError,
+    extract_video_gps_info,
+    extract_video_metadata,
+    extract_video_timestamp,
+    validate_decimal_coordinate,
 )
 
 
 class TestVideoLoader(unittest.TestCase):
+    """Test video metadata extraction and validation."""
 
-    def test_video_con_gps_valido_android(self):
-        metadati = {
+    def test_android_video_with_valid_gps(self):
+        metadata = {
             "GPSLatitude": 39.8244,
             "GPSLongitude": 16.194,
             "MediaCreateDate": (
@@ -36,7 +37,7 @@ class TestVideoLoader(unittest.TestCase):
             ),
         }
 
-        gps_info = estrai_gps_info_video(metadati)
+        gps_info = extract_video_gps_info(metadata)
 
         self.assertEqual(
             gps_info["GPSLatitude"],
@@ -49,12 +50,12 @@ class TestVideoLoader(unittest.TestCase):
         )
 
         self.assertEqual(
-            estrai_timestamp_video(metadati),
+            extract_video_timestamp(metadata),
             "2026:10:15 19:32:58",
         )
 
-    def test_video_con_gps_valido_iphone(self):
-        metadati = {
+    def test_iphone_video_with_valid_gps(self):
+        metadata = {
             "GPSLatitude": 39.8244,
             "GPSLongitude": 16.194,
             "GPSAltitude": 410.626,
@@ -66,7 +67,7 @@ class TestVideoLoader(unittest.TestCase):
             ),
         }
 
-        gps_info = estrai_gps_info_video(metadati)
+        gps_info = extract_video_gps_info(metadata)
 
         self.assertEqual(
             gps_info["GPSAltitude"],
@@ -74,27 +75,27 @@ class TestVideoLoader(unittest.TestCase):
         )
 
         self.assertEqual(
-            estrai_timestamp_video(metadati),
+            extract_video_timestamp(metadata),
             "2026:10:15 20:37:36+02:00",
         )
 
-    def test_video_senza_gps(self):
-        metadati = {
+    def test_video_without_gps(self):
+        metadata = {
             "MediaCreateDate": (
                 "2025:09:17 13:03:49"
             ),
         }
 
         self.assertIsNone(
-            estrai_gps_info_video(metadati)
+            extract_video_gps_info(metadata)
         )
 
-    def test_video_con_gps_incompleto(self):
-        metadati = {
+    def test_video_with_incomplete_gps(self):
+        metadata = {
             "GPSLatitude": 39.8244,
         }
 
-        gps_info = estrai_gps_info_video(metadati)
+        gps_info = extract_video_gps_info(metadata)
 
         self.assertIsNotNone(gps_info)
 
@@ -108,9 +109,9 @@ class TestVideoLoader(unittest.TestCase):
             gps_info,
         )
 
-    def test_coordinate_valide(self):
+    def test_valid_coordinates(self):
         self.assertEqual(
-            converti_coordinata_decimale(
+            validate_decimal_coordinate(
                 39.8244,
                 -90.0,
                 90.0,
@@ -119,7 +120,7 @@ class TestVideoLoader(unittest.TestCase):
         )
 
         self.assertEqual(
-            converti_coordinata_decimale(
+            validate_decimal_coordinate(
                 16.194,
                 -180.0,
                 180.0,
@@ -127,9 +128,9 @@ class TestVideoLoader(unittest.TestCase):
             16.194,
         )
 
-    def test_coordinate_fuori_intervallo(self):
+    def test_coordinates_outside_range(self):
         self.assertIsNone(
-            converti_coordinata_decimale(
+            validate_decimal_coordinate(
                 91.0,
                 -90.0,
                 90.0,
@@ -137,21 +138,21 @@ class TestVideoLoader(unittest.TestCase):
         )
 
         self.assertIsNone(
-            converti_coordinata_decimale(
+            validate_decimal_coordinate(
                 -181.0,
                 -180.0,
                 180.0,
             )
         )
 
-    def test_timestamp_sconosciuto(self):
+    def test_unknown_timestamp(self):
         self.assertEqual(
-            estrai_timestamp_video({}),
-            "Data sconosciuta",
+            extract_video_timestamp({}),
+            "Unknown date",
         )
 
-    def test_estrai_metadati_video_da_json(self):
-        risposta_exiftool = [
+    def test_metadata_extraction_from_json(self):
+        exiftool_response = [
             {
                 "SourceFile": "video.mp4",
                 "FileType": "MP4",
@@ -161,12 +162,12 @@ class TestVideoLoader(unittest.TestCase):
             }
         ]
 
-        processo_finto = Mock()
-        processo_finto.returncode = 0
-        processo_finto.stdout = json.dumps(
-            risposta_exiftool
+        mock_process = Mock()
+        mock_process.returncode = 0
+        mock_process.stdout = json.dumps(
+            exiftool_response
         )
-        processo_finto.stderr = ""
+        mock_process.stderr = ""
 
         with patch(
             "video_loader.os.path.isfile",
@@ -174,38 +175,38 @@ class TestVideoLoader(unittest.TestCase):
         ):
             with patch(
                 "video_loader.subprocess.run",
-                return_value=processo_finto,
+                return_value=mock_process,
             ):
-                metadati = estrai_metadati_video(
+                metadata = extract_video_metadata(
                     "video.mp4",
                     "exiftool.exe",
                 )
 
         self.assertEqual(
-            metadati["GPSLatitude"],
+            metadata["GPSLatitude"],
             39.8244,
         )
 
         self.assertEqual(
-            metadati["GPSLongitude"],
+            metadata["GPSLongitude"],
             16.194,
         )
 
-    def test_file_non_video_viene_rifiutato(self):
-        risposta_exiftool = [
+    def test_unsupported_file_type_is_rejected(self):
+        exiftool_response = [
             {
-                "SourceFile": "corrotto.mp4",
+                "SourceFile": "corrupt.mp4",
                 "FileType": "TXT",
                 "MIMEType": "text/plain",
             }
         ]
 
-        processo_finto = Mock()
-        processo_finto.returncode = 0
-        processo_finto.stdout = json.dumps(
-            risposta_exiftool
+        mock_process = Mock()
+        mock_process.returncode = 0
+        mock_process.stdout = json.dumps(
+            exiftool_response
         )
-        processo_finto.stderr = ""
+        mock_process.stderr = ""
 
         with patch(
             "video_loader.os.path.isfile",
@@ -213,17 +214,17 @@ class TestVideoLoader(unittest.TestCase):
         ):
             with patch(
                 "video_loader.subprocess.run",
-                return_value=processo_finto,
+                return_value=mock_process,
             ):
                 with self.assertRaises(
-                    VideoNonLeggibileError
+                    UnreadableVideoError
                 ):
-                    estrai_metadati_video(
-                        "corrotto.mp4",
+                    extract_video_metadata(
+                        "corrupt.mp4",
                         "exiftool.exe",
                     )
 
-    def test_exiftool_non_disponibile(self):
+    def test_exiftool_is_unavailable(self):
         with patch(
             "video_loader.os.path.isfile",
             return_value=True,
@@ -231,22 +232,22 @@ class TestVideoLoader(unittest.TestCase):
             with patch(
                 "video_loader.subprocess.run",
                 side_effect=FileNotFoundError(
-                    "ExifTool non trovato"
+                    "ExifTool not found"
                 ),
             ):
                 with self.assertRaises(
-                    ExifToolNonDisponibileError
+                    ExifToolUnavailableError
                 ):
-                    estrai_metadati_video(
+                    extract_video_metadata(
                         "video.mp4",
                         "exiftool.exe",
                     )
 
-    def test_video_con_json_non_valido(self):
-        processo_finto = Mock()
-        processo_finto.returncode = 0
-        processo_finto.stdout = "JSON_NON_VALIDO"
-        processo_finto.stderr = ""
+    def test_invalid_exiftool_json(self):
+        mock_process = Mock()
+        mock_process.returncode = 0
+        mock_process.stdout = "INVALID_JSON"
+        mock_process.stderr = ""
 
         with patch(
             "video_loader.os.path.isfile",
@@ -254,12 +255,12 @@ class TestVideoLoader(unittest.TestCase):
         ):
             with patch(
                 "video_loader.subprocess.run",
-                return_value=processo_finto,
+                return_value=mock_process,
             ):
                 with self.assertRaises(
-                    VideoNonLeggibileError
+                    UnreadableVideoError
                 ):
-                    estrai_metadati_video(
+                    extract_video_metadata(
                         "video.mp4",
                         "exiftool.exe",
                     )

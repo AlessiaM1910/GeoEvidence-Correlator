@@ -2,109 +2,170 @@ import csv
 
 from core import haversine_distance
 
-#questo file serve per trasformare i dati di vari formatic (CSV, JSON, Foto) in righe che verranno salvate in un file CSV
 
-
-CAMPI_REPORT = [
-    "id",  #numero progressivo
-    "nome_evidenza",
-    "lat",
-    "lon",
-    "distanza_km", #distanza dal punto cercato
-    "timestamp", #presente solo per le foto
-    "tipo",
-    "fonte",
-    "esito", #se dentro o fuori raggio
+REPORT_FIELDS = [
+    "id",
+    "evidence_name",
+    "latitude",
+    "longitude",
+    "distance_km",
+    "timestamp",
+    "evidence_type",
+    "source",
+    "result",
 ]
 
-def evidenze_da_punti(punti, fonte):
-    evidenze=[]
 
-    for lat, lon , nome in punti:
-        evidenze.append({
-            "nome_evidenza":nome,
-            "lat": lat,
-            "lon": lon,
-            "timestamp": "",
-            "tipo": "punto",
-            "fonte": fonte
-        })
+def evidence_from_points(points, source):
+    """Convert geographic point tuples into report evidence dictionaries.
 
-    return evidenze
+    Args:
+        points: Tuples in the format (latitude, longitude, name).
+        source: Source label for the points.
 
-def evidenze_da_foto(foto):
-    evidenze=[]
+    Returns:
+        Evidence dictionaries ready for classification.
+    """
+    evidence_items = []
 
-    for lat, lon, percorso, timestamp in foto:
-        evidenze.append({
-            "nome_evidenza": percorso,
-            "lat": lat,
-            "lon": lon,
-            "timestamp": timestamp,
-            "tipo": "foto",
-            "fonte": "EXIF",
-        })
+    for latitude, longitude, name in points:
+        evidence_items.append(
+            {
+                "evidence_name": name,
+                "latitude": latitude,
+                "longitude": longitude,
+                "timestamp": "",
+                "evidence_type": "point",
+                "source": source,
+            }
+        )
 
-    return evidenze
+    return evidence_items
 
-def evidenze_da_video(video):
-    evidenze = []
 
-    for lat, lon, percorso, timestamp in video:
-        evidenze.append({
-            "nome_evidenza": percorso,
-            "lat": lat,
-            "lon": lon,
-            "timestamp": timestamp,
-            "tipo": "video",
-            "fonte": "ExifTool",
-        })
+def evidence_from_images(images):
+    """Convert image GPS results into report evidence dictionaries.
 
-    return evidenze
+    Args:
+        images: Image tuples from scan_image_directory.
 
-def classifica_reperti(evidenze, lat_centro, lon_centro, raggiokm):
-    righe_report=[]
+    Returns:
+        Image evidence dictionaries ready for classification.
+    """
+    evidence_items = []
 
-    for elemento in evidenze: #per ogni "prova" calcola la distanza tra quest'ultima e il centro passato alla funzione
-        distanza= haversine_distance(elemento["lat"], elemento["lon"], lat_centro, lon_centro)
+    for latitude, longitude, relative_path, timestamp in images:
+        evidence_items.append(
+            {
+                "evidence_name": relative_path,
+                "latitude": latitude,
+                "longitude": longitude,
+                "timestamp": timestamp,
+                "evidence_type": "image",
+                "source": "EXIF",
+            }
+        )
 
-        riga=dict(elemento) #crea una copia del dizionario senza alterare l'originale
-        riga["distanza_km"]= round(distanza, 6)
+    return evidence_items
 
-        if distanza <= raggiokm:
-            riga["esito"] = "DENTRO_RAGGIO"
+
+def evidence_from_videos(videos):
+    """Convert video GPS results into report evidence dictionaries.
+
+    Args:
+        videos: Video tuples from scan_video_directory.
+
+    Returns:
+        Video evidence dictionaries ready for classification.
+    """
+    evidence_items = []
+
+    for latitude, longitude, relative_path, timestamp in videos:
+        evidence_items.append(
+            {
+                "evidence_name": relative_path,
+                "latitude": latitude,
+                "longitude": longitude,
+                "timestamp": timestamp,
+                "evidence_type": "video",
+                "source": "ExifTool",
+            }
+        )
+
+    return evidence_items
+
+
+def classify_evidence(evidence_items,center_latitude,center_longitude,radius_km):
+    """Classify evidence as inside or outside a geographic radius.
+
+    Args:
+        evidence_items: Evidence dictionaries with coordinates.
+        center_latitude: Latitude of the search center.
+        center_longitude: Longitude of the search center.
+        radius_km: Search radius in kilometers.
+
+    Returns:
+        Classified and distance-ordered report rows.
+    """
+    report_rows = []
+
+    for evidence in evidence_items:
+        distance_km = haversine_distance(evidence["latitude"],evidence["longitude"],center_latitude,center_longitude)
+
+        row = dict(evidence)
+        row["distance_km"] = round(distance_km, 6)
+
+        if distance_km <= radius_km:
+            row["result"] = "INSIDE_RADIUS"
         else:
-            riga["esito"] = "FUORI_RAGGIO"
+            row["result"] = "OUTSIDE_RADIUS"
 
-        righe_report.append(riga)
+        report_rows.append(row)
 
-    righe_report.sort(key=lambda riga: riga["distanza_km"]) #righe ordinate in base alla distanza (da più vicina a più lontana)
+    report_rows.sort(key=lambda row: row["distance_km"])
 
-    for indice, riga in enumerate(righe_report, start=1): 
-        riga["id"] = indice  #assegna id progressivo
+    for index, row in enumerate(report_rows, start=1):
+        row["id"] = index
 
-    return righe_report
+    return report_rows
 
-def formatta_numero_csv(valore):
-    if isinstance(valore, float):
-        testo = "{:.6f}".format(valore)
-        testo = testo.rstrip("0").rstrip(".")
-        return testo.replace(".", ",")
 
-    return valore
+def format_csv_number(value):
+    """Format floating-point values for semicolon-delimited Italian CSV.
 
-def scrivi_report_csv(percorso_report, righe_report):
-    with open(percorso_report, "w", newline="", encoding= "utf-8-sig") as file_report:
-        scrittore=csv.DictWriter(file_report, fieldnames=CAMPI_REPORT, delimiter=";")
+    Args:
+        value: Value to format.
 
-        scrittore.writeheader()
+    Returns:
+        Value with a comma decimal separator when it is a float.
+    """
+    if isinstance(value, float):
+        text = "{:.6f}".format(value)
+        text = text.rstrip("0").rstrip(".")
 
-        for riga in righe_report:
-            riga_formattata = {}
+        return text.replace(".", ",")
 
-            for campo in CAMPI_REPORT:
-                riga_formattata[campo] = formatta_numero_csv(
-                    riga.get(campo, "")
+    return value
+
+
+def write_csv_report(report_path, report_rows):
+    """Write classified evidence to a semicolon-delimited CSV report.
+
+    Args:
+        report_path: Destination CSV path.
+        report_rows: Classified evidence dictionaries.
+    """
+    with open(report_path,"w",newline="",encoding="utf-8-sig",) as report_file:
+        writer = csv.DictWriter(report_file,fieldnames=REPORT_FIELDS,delimiter=";")
+
+        writer.writeheader()
+
+        for row in report_rows:
+            formatted_row = {}
+
+            for field in REPORT_FIELDS:
+                formatted_row[field] = format_csv_number(
+                    row.get(field, "")
                 )
 
-            scrittore.writerow(riga_formattata)
+            writer.writerow(formatted_row)

@@ -4,64 +4,68 @@ import sys
 import tempfile
 import unittest
 
-CARTELLA_LOGICA = os.path.dirname(
+
+LOGIC_DIRECTORY = os.path.dirname(
     os.path.dirname(
         os.path.abspath(__file__)
     )
 )
 
-if CARTELLA_LOGICA not in sys.path:
-    sys.path.insert(0, CARTELLA_LOGICA)
+if LOGIC_DIRECTORY not in sys.path:
+    sys.path.insert(0, LOGIC_DIRECTORY)
+
 
 from report import (
-    CAMPI_REPORT,
-    evidenze_da_punti,
-    evidenze_da_foto,
-    evidenze_da_video,
-    classifica_reperti,
-    scrivi_report_csv,
+    REPORT_FIELDS,
+    classify_evidence,
+    evidence_from_images,
+    evidence_from_points,
+    evidence_from_videos,
+    write_csv_report,
 )
 
 
 class TestReport(unittest.TestCase):
+    """Test evidence conversion, classification and CSV reporting."""
 
-    def crea_percorso_temporaneo(self):
-        descrittore, percorso = tempfile.mkstemp(
+    def create_temporary_path(self):
+        """Create a temporary CSV path and remove it after the test."""
+        descriptor, file_path = tempfile.mkstemp(
             suffix=".csv",
         )
 
-        os.close(descrittore)
+        os.close(descriptor)
 
-        self.addCleanup(os.remove, percorso)
+        self.addCleanup(os.remove, file_path)
 
-        return percorso
+        return file_path
 
-    def test_evidenze_da_punti(self):
-        punti = [
-            (39.36336, 16.22622, "Punto CSV"),
+    def test_evidence_from_points(self):
+        points = [
+            (39.36336, 16.22622, "CSV point"),
         ]
 
-        evidenze = evidenze_da_punti(
-            punti,
+        evidence_items = evidence_from_points(
+            points,
             "CSV",
         )
 
         self.assertEqual(
-            evidenze,
+            evidence_items,
             [
                 {
-                    "nome_evidenza": "Punto CSV",
-                    "lat": 39.36336,
-                    "lon": 16.22622,
+                    "evidence_name": "CSV point",
+                    "latitude": 39.36336,
+                    "longitude": 16.22622,
                     "timestamp": "",
-                    "tipo": "punto",
-                    "fonte": "CSV",
+                    "evidence_type": "point",
+                    "source": "CSV",
                 }
             ],
         )
 
-    def test_evidenze_da_foto(self):
-        foto = [
+    def test_evidence_from_images(self):
+        images = [
             (
                 39.36336,
                 16.22622,
@@ -70,24 +74,24 @@ class TestReport(unittest.TestCase):
             )
         ]
 
-        evidenze = evidenze_da_foto(foto)
+        evidence_items = evidence_from_images(images)
 
         self.assertEqual(
-            evidenze,
+            evidence_items,
             [
                 {
-                    "nome_evidenza": "IMG_2786.JPG",
-                    "lat": 39.36336,
-                    "lon": 16.22622,
+                    "evidence_name": "IMG_2786.JPG",
+                    "latitude": 39.36336,
+                    "longitude": 16.22622,
                     "timestamp": "2026:10:02 14:57:17",
-                    "tipo": "foto",
-                    "fonte": "EXIF",
+                    "evidence_type": "image",
+                    "source": "EXIF",
                 }
             ],
         )
 
-    def test_evidenze_da_video(self):
-        video = [
+    def test_evidence_from_videos(self):
+        videos = [
             (
                 39.375155,
                 16.271693,
@@ -96,226 +100,213 @@ class TestReport(unittest.TestCase):
             )
         ]
 
-        evidenze = evidenze_da_video(video)
+        evidence_items = evidence_from_videos(videos)
 
         self.assertEqual(
-            evidenze,
+            evidence_items,
             [
                 {
-                    "nome_evidenza": "con_gps.mp4",
-                    "lat": 39.375155,
-                    "lon": 16.271693,
+                    "evidence_name": "con_gps.mp4",
+                    "latitude": 39.375155,
+                    "longitude": 16.271693,
                     "timestamp": "2026:01:01 10:01:00+01:00",
-                    "tipo": "video",
-                    "fonte": "ExifTool",
+                    "evidence_type": "video",
+                    "source": "ExifTool",
                 }
             ],
-    )
+        )
 
-    def test_classifica_reperti_esito_dentro_fuori(self):
-        evidenze = [
+    def test_classify_evidence_inside_and_outside_radius(self):
+        evidence_items = [
             {
-                "nome_evidenza": "Centro",
-                "lat": 0,
-                "lon": 0,
+                "evidence_name": "Center",
+                "latitude": 0,
+                "longitude": 0,
                 "timestamp": "",
-                "tipo": "punto",
-                "fonte": "TEST",
+                "evidence_type": "point",
+                "source": "TEST",
             },
             {
-                "nome_evidenza": "Lontano",
-                "lat": 0,
-                "lon": 2,
+                "evidence_name": "Distant",
+                "latitude": 0,
+                "longitude": 2,
                 "timestamp": "",
-                "tipo": "punto",
-                "fonte": "TEST",
+                "evidence_type": "point",
+                "source": "TEST",
             },
         ]
 
-        righe = classifica_reperti(
-            evidenze,
+        report_rows = classify_evidence(
+            evidence_items,
             0,
             0,
             1,
         )
 
         self.assertEqual(
-            righe[0]["esito"],
-            "DENTRO_RAGGIO",
+            report_rows[0]["result"],
+            "INSIDE_RADIUS",
         )
 
         self.assertEqual(
-            righe[1]["esito"],
-            "FUORI_RAGGIO",
+            report_rows[1]["result"],
+            "OUTSIDE_RADIUS",
         )
 
-    def test_classifica_reperti_ordina_e_assegna_id(self):
-        evidenze = [
+    def test_classify_evidence_orders_rows_and_assigns_ids(self):
+        evidence_items = [
             {
-                "nome_evidenza": "Lontano",
-                "lat": 0,
-                "lon": 2,
+                "evidence_name": "Distant",
+                "latitude": 0,
+                "longitude": 2,
                 "timestamp": "",
-                "tipo": "punto",
-                "fonte": "TEST",
+                "evidence_type": "point",
+                "source": "TEST",
             },
             {
-                "nome_evidenza": "Vicino",
-                "lat": 0,
-                "lon": 0.5,
+                "evidence_name": "Near",
+                "latitude": 0,
+                "longitude": 0.5,
                 "timestamp": "",
-                "tipo": "punto",
-                "fonte": "TEST",
+                "evidence_type": "point",
+                "source": "TEST",
             },
             {
-                "nome_evidenza": "Centro",
-                "lat": 0,
-                "lon": 0,
+                "evidence_name": "Center",
+                "latitude": 0,
+                "longitude": 0,
                 "timestamp": "",
-                "tipo": "punto",
-                "fonte": "TEST",
+                "evidence_type": "point",
+                "source": "TEST",
             },
         ]
 
-        righe = classifica_reperti(
-            evidenze,
+        report_rows = classify_evidence(
+            evidence_items,
             0,
             0,
             112,
         )
 
-        nomi = []
+        evidence_names = []
 
-        for riga in righe:
-            nomi.append(riga["nome_evidenza"])
-
-        self.assertEqual(
-            nomi,
-            ["Centro", "Vicino", "Lontano"],
-        )
+        for row in report_rows:
+            evidence_names.append(
+                row["evidence_name"]
+            )
 
         self.assertEqual(
-            righe[0]["id"],
-            1,
+            evidence_names,
+            ["Center", "Near", "Distant"],
         )
 
-        self.assertEqual(
-            righe[1]["id"],
-            2,
-        )
+        self.assertEqual(report_rows[0]["id"], 1)
+        self.assertEqual(report_rows[1]["id"], 2)
+        self.assertEqual(report_rows[2]["id"], 3)
 
-        self.assertEqual(
-            righe[2]["id"],
-            3,
-        )
-
-    def test_classifica_non_modifica_evidenze_originali(self):
-        evidenze = [
+    def test_classify_evidence_does_not_modify_original_items(self):
+        evidence_items = [
             {
-                "nome_evidenza": "Centro",
-                "lat": 0,
-                "lon": 0,
+                "evidence_name": "Center",
+                "latitude": 0,
+                "longitude": 0,
                 "timestamp": "",
-                "tipo": "punto",
-                "fonte": "TEST",
+                "evidence_type": "point",
+                "source": "TEST",
             }
         ]
 
-        classifica_reperti(
-            evidenze,
+        classify_evidence(
+            evidence_items,
             0,
             0,
             1,
         )
 
         self.assertNotIn(
-            "distanza_km",
-            evidenze[0],
+            "distance_km",
+            evidence_items[0],
         )
 
         self.assertNotIn(
-            "esito",
-            evidenze[0],
+            "result",
+            evidence_items[0],
         )
 
         self.assertNotIn(
             "id",
-            evidenze[0],
+            evidence_items[0],
         )
 
-    def test_scrivi_report_csv(self):
-        righe = [
+    def test_write_csv_report(self):
+        report_rows = [
             {
                 "id": 1,
-                "nome_evidenza": "IMG_2786.JPG",
-                "lat": 39.36336,
-                "lon": 16.22622,
-                "distanza_km": 0.0,
+                "evidence_name": "IMG_2786.JPG",
+                "latitude": 39.36336,
+                "longitude": 16.22622,
+                "distance_km": 0.0,
                 "timestamp": "2026:10:02 14:57:17",
-                "tipo": "foto",
-                "fonte": "EXIF",
-                "esito": "DENTRO_RAGGIO",
+                "evidence_type": "image",
+                "source": "EXIF",
+                "result": "INSIDE_RADIUS",
             }
         ]
 
-        percorso = self.crea_percorso_temporaneo()
+        report_path = self.create_temporary_path()
 
-        scrivi_report_csv(
-            percorso,
-            righe,
+        write_csv_report(
+            report_path,
+            report_rows,
         )
 
         with open(
-            percorso,
+            report_path,
             "r",
             encoding="utf-8-sig",
             newline="",
-        ) as file_report:
-
-            lettore = csv.DictReader(
-                file_report,
+        ) as report_file:
+            reader = csv.DictReader(
+                report_file,
                 delimiter=";",
             )
 
-            righe_lette = list(lettore)
+            read_rows = list(reader)
 
         self.assertEqual(
-            lettore.fieldnames,
-            CAMPI_REPORT,
+            reader.fieldnames,
+            REPORT_FIELDS,
         )
 
-        self.assertEqual(
-            len(righe_lette),
-            1,
-        )
+        self.assertEqual(len(read_rows), 1)
 
         self.assertEqual(
-            righe_lette[0]["nome_evidenza"],
+            read_rows[0]["evidence_name"],
             "IMG_2786.JPG",
         )
 
         self.assertEqual(
-            righe_lette[0]["esito"],
-            "DENTRO_RAGGIO",
+            read_rows[0]["result"],
+            "INSIDE_RADIUS",
         )
 
         self.assertEqual(
-            righe_lette[0]["fonte"],
+            read_rows[0]["source"],
             "EXIF",
         )
 
         self.assertEqual(
-            righe_lette[0]["lat"],
+            read_rows[0]["latitude"],
             "39,36336",
         )
 
         self.assertEqual(
-            righe_lette[0]["lon"],
+            read_rows[0]["longitude"],
             "16,22622",
         )
 
         self.assertEqual(
-            righe_lette[0]["distanza_km"],
+            read_rows[0]["distance_km"],
             "0",
         )
 

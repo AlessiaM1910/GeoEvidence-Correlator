@@ -57,7 +57,7 @@ class TestExifLoader(unittest.TestCase):
 
         for record in manifest:
             cls.records_by_filename[
-                record["nome_file"]
+                record["filename"]
             ] = record
 
     def image_path(self, filename):

@@ -19,7 +19,10 @@ if LOGIC_DIRECTORY not in sys.path:
 
 
 from exif_loader import scan_image_directory
-from report import classifica_reperti, evidenze_da_foto
+from report import (
+    classify_evidence,
+    evidence_from_images,
+)
 
 
 TEST_IMAGES_DIRECTORY = os.path.join(
@@ -59,7 +62,7 @@ class TestSyntheticDataset(unittest.TestCase):
         categories = {}
 
         for record in self.manifest:
-            category = record["categoria"]
+            category = record["category"]
 
             if category not in categories:
                 categories[category] = 0
@@ -67,27 +70,27 @@ class TestSyntheticDataset(unittest.TestCase):
             categories[category] += 1
 
         self.assertEqual(
-            categories["gps_valido_dentro"],
+            categories["valid_gps_inside"],
             1,
         )
 
         self.assertEqual(
-            categories["gps_valido_fuori"],
+            categories["valid_gps_outside"],
             1,
         )
 
         self.assertEqual(
-            categories["senza_gps"],
+            categories["without_gps"],
             1,
         )
 
         self.assertEqual(
-            categories["gps_incompleto"],
+            categories["incomplete_gps"],
             1,
         )
 
         self.assertEqual(
-            categories["file_corrotto"],
+            categories["corrupt_file"],
             1,
         )
 
@@ -134,8 +137,8 @@ class TestSyntheticDataset(unittest.TestCase):
                 TEST_IMAGES_DIRECTORY
             )
 
-        report_rows = classifica_reperti(
-            evidenze_da_foto(image_results),
+        report_rows = classify_evidence(
+            evidence_from_images(image_results),
             CENTER_LATITUDE,
             CENTER_LONGITUDE,
             RADIUS_KM,
@@ -144,12 +147,12 @@ class TestSyntheticDataset(unittest.TestCase):
         expected_results = {}
 
         for record in self.manifest:
-            if record["esito_atteso"] in (
-                "DENTRO_RAGGIO",
-                "FUORI_RAGGIO",
+            if record["expected_result"] in (
+                "INSIDE_RADIUS",
+                "OUTSIDE_RADIUS",
             ):
-                expected_results[record["nome_file"]] = (
-                    record["esito_atteso"]
+                expected_results[record["filename"]] = (
+                    record["expected_result"]
                 )
 
         self.assertEqual(len(report_rows), 2)
@@ -157,26 +160,26 @@ class TestSyntheticDataset(unittest.TestCase):
 
         for row in report_rows:
             filename = os.path.basename(
-                row["nome_evidenza"]
+                row["evidence_name"]
             )
 
             self.assertIn(filename, expected_results)
 
             self.assertEqual(
-                row["esito"],
+                row["result"],
                 expected_results[filename],
             )
 
         inside_count = sum(
             1
             for row in report_rows
-            if row["esito"] == "DENTRO_RAGGIO"
+            if row["result"] == "INSIDE_RADIUS"
         )
 
         outside_count = sum(
             1
             for row in report_rows
-            if row["esito"] == "FUORI_RAGGIO"
+            if row["result"] == "OUTSIDE_RADIUS"
         )
 
         self.assertEqual(inside_count, 1)

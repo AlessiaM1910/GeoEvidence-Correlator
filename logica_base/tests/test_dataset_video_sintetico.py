@@ -18,7 +18,7 @@ if LOGIC_DIRECTORY not in sys.path:
     sys.path.insert(0, LOGIC_DIRECTORY)
 
 
-from video_loader import scansiona_cartella_video
+from video_loader import scan_video_directory
 
 
 VIDEO_DIRECTORY = os.path.join(
@@ -43,12 +43,11 @@ EXIFTOOL_PATH = os.environ.get("EXIFTOOL_PATH")
     "Set EXIFTOOL_PATH before running video integration tests.",
 )
 class TestSyntheticVideoDataset(unittest.TestCase):
+    """Test expected outcomes for the synthetic video dataset."""
 
     @classmethod
     def setUpClass(cls):
-        """
-        Loads the expected metadata and verifies ExifTool availability.
-        """
+        """Load the manifest and validate the ExifTool path."""
         if not os.path.isfile(EXIFTOOL_PATH):
             raise unittest.SkipTest(
                 "ExifTool executable not found: {0}".format(
@@ -64,9 +63,7 @@ class TestSyntheticVideoDataset(unittest.TestCase):
             cls.manifest = json.load(manifest_file)
 
     def test_manifest_contains_three_video_cases(self):
-        """
-        Verifies that the dataset documents all expected video cases.
-        """
+        """Verify that the manifest contains every video test case."""
         self.assertEqual(len(self.manifest), 3)
 
         categories = set(
@@ -83,14 +80,12 @@ class TestSyntheticVideoDataset(unittest.TestCase):
             },
         )
 
-    def test_video_loader_matches_the_synthetic_dataset(self):
-        """
-        Runs ExifTool through video_loader and checks all outcomes.
-        """
+    def test_video_loader_matches_synthetic_dataset(self):
+        """Run ExifTool and verify expected extraction outcomes."""
         output = io.StringIO()
 
         with redirect_stdout(output):
-            videos = scansiona_cartella_video(
+            videos = scan_video_directory(
                 VIDEO_DIRECTORY,
                 EXIFTOOL_PATH,
             )
@@ -98,27 +93,27 @@ class TestSyntheticVideoDataset(unittest.TestCase):
         statistics = output.getvalue()
 
         self.assertIn(
-            "Video candidati: 3",
+            "Candidate videos: 3",
             statistics,
         )
 
         self.assertIn(
-            "Video con GPS valido: 1",
+            "Videos with valid GPS: 1",
             statistics,
         )
 
         self.assertIn(
-            "Video senza GPS: 1",
+            "Videos without GPS: 1",
             statistics,
         )
 
         self.assertIn(
-            "Video con GPS non valido: 0",
+            "Videos with invalid GPS: 0",
             statistics,
         )
 
         self.assertIn(
-            "Video non leggibili/corrotti: 1",
+            "Unreadable or corrupt videos: 1",
             statistics,
         )
 

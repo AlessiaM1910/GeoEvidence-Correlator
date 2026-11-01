@@ -4,18 +4,20 @@ import subprocess
 
 #stessa logica di exif_loader solo che invece di usare pillow richiameremo exiftool.exe
 
-class VideoNonLeggibileError(Exception):
+class UnreadableVideoError(Exception):
+    """Raised when a video cannot be read or is unsupported."""
     pass
 
 
-class ExifToolNonDisponibileError(Exception):
+class ExifToolUnavailableError(Exception):
+    """Raised when the ExifTool executable cannot be started."""
     pass
 
 
-ESTENSIONI_VIDEO = (".mp4", ".mov")
-TIPI_VIDEO_SUPPORTATI = ("MP4", "MOV")
+VIDEO_EXTENSION = (".mp4", ".mov")
+SUPPORTED_VIDEO_TYPES = ("MP4", "MOV")
 
-CAMPI_EXIFTOOL = (
+EXIFTOOL_FIELDS = (
     "-FileType",
     "-MIMEType",
     "-GPSLatitude",
@@ -29,75 +31,92 @@ CAMPI_EXIFTOOL = (
 )
 
 
-def estrai_metadati_video(percorso_video, exiftool_path):
-    """
-    Esegue ExifTool in sola lettura e restituisce il primo oggetto JSON.
+def extract_video_metadata(video_path, exiftool_path):
+    """Extract selected video metadata using ExifTool.
+
+    Args:
+        video_path: Path of the MP4 or MOV file.
+        exiftool_path: Path of the ExifTool executable.
+
+    Returns:
+        The first metadata dictionary returned by ExifTool.
+
+    Raises:
+        UnreadableVideoError: If the file is missing, invalid or unsupported.
+        ExifToolUnavailableError: If ExifTool cannot be executed.
     """
 
-    if not os.path.isfile(percorso_video):
-        raise VideoNonLeggibileError(
-            "File non trovato: {}".format(percorso_video)
+    if not os.path.isfile(video_path):
+        raise UnreadableVideoError(
+            "File not found: {}".format(video_path)
         )
 
-    comando = [exiftool_path,"-j","-n", "-s"]
+    command = [exiftool_path,"-j","-n", "-s"]
 
-    comando.extend(CAMPI_EXIFTOOL)
-    comando.append(percorso_video)
+    command.extend(EXIFTOOL_FIELDS)
+    command.append(video_path)
 
     try:
-        risultato = subprocess.run(
-            comando,
+        result = subprocess.run(
+            command,
             capture_output=True,
             text=True,
         )
-    except FileNotFoundError as errore:
-        raise ExifToolNonDisponibileError(str(errore))
-    except OSError as errore:
-        raise ExifToolNonDisponibileError(str(errore))
+    except FileNotFoundError as error:
+        raise ExifToolUnavailableError(str(error))
+    except OSError as error:
+        raise ExifToolUnavailableError(str(error))
 
-    if risultato.returncode != 0:
-        raise VideoNonLeggibileError(
-            risultato.stderr.strip()
+    if result.returncode != 0:
+        raise UnreadableVideoError(
+            result.stderr.strip()
         )
 
     try:
-        dati = json.loads(risultato.stdout)
+        metadata_list = json.loads(result.stdout)
     except json.JSONDecodeError as errore:
-        raise VideoNonLeggibileError(str(errore))
+        raise UnreadableVideoError(str(errore))
 
-    if not dati:
-        raise VideoNonLeggibileError(
-            "ExifTool non ha restituito metadati"
-        )
+    if not metadata_list:
+        raise UnreadableVideoError(
+            "ExifTool returned no metadata.")
 
-    metadati = dati[0]
+    metadata = metadata_list[0]
 
-    tipo_file = metadati.get("FileType")
-    if tipo_file not in TIPI_VIDEO_SUPPORTATI:
-        raise VideoNonLeggibileError("Formato video non supportato: {}".format(
-                    tipo_file or "sconosciuto"
+    file_type = metadata.get("FileType")
+    if file_type not in SUPPORTED_VIDEO_TYPES:
+        raise UnreadableVideoError("Unsupported video format: {}".format(
+                    file_type or "unknown"
                 )
             )
 
-    return metadati
+    return metadata
 
 
 #restituisce dati GPS trovati da Exiftool, altrimenti retsituisce none
-def estrai_gps_info_video(metadati):
-    if not metadati:
+def extract_video_gps_info(metadata):
+    """Extract available GPS values from video metadata.
+
+    Args:
+        metadata: Metadata dictionary returned by ExifTool.
+
+    Returns:
+        GPS metadata dictionary, or None if GPS is unavailable.
+    """
+    if not metadata:
         return None
 
     gps_info = {}
 
-    for campo in (
+    for field in (
         "GPSLatitude",
         "GPSLongitude",
         "GPSAltitude",
     ):
-        valore = metadati.get(campo)
+        value = metadata.get(field)
 
-        if valore is not None:
-            gps_info[campo] = valore
+        if value is not None:
+            gps_info[field] = value
 
     if not gps_info:
         return None
@@ -105,32 +124,47 @@ def estrai_gps_info_video(metadati):
     return gps_info
 
 
-def converti_coordinata_decimale(valore, minimo, massimo):
+def validate_decimal_coordinate(value, minimum, maximum):
+    """Convert and validate a decimal geographic coordinate.
+
+    Args:
+        value: Coordinate value to validate.
+        minimum: Minimum allowed value.
+        maximum: Maximum allowed value.
+
+    Returns:
+        Valid decimal coordinate, or None if invalid.
+    """
+
     """
     ExifTool con -n restituisce già coordinate decimali.
     Qui controlliamo che siano numeri validi e nel range terrestre.
     """
 
     try:
-        coordinata = float(valore)
+        coordinate = float(value)
     except (TypeError, ValueError):
         return None
 
-    if not (minimo <= coordinata <= massimo):
+    if not (minimum <= coordinate <= maximum):
         return None
 
-    return coordinata
+    return coordinate
 
 
-def estrai_timestamp_video(metadati):
+def extract_video_timestamp(metadata):
+    """Extract the preferred timestamp from video metadata.
+
+    Args:
+        metadata: Metadata dictionary returned by ExifTool.
+
+    Returns:
+        The first available timestamp, or ``Unknown date``.
     """
-    Restituisce la prima data disponibile in ordine di affidabilità.
-    """
+    if not metadata:
+        return "Unknown date"
 
-    if not metadati:
-        return "Data sconosciuta"
-
-    campi_timestamp = (
+    timestamp_field = (
         "GPSDateTime",
         "CreationDate",
         "MediaCreateDate",
@@ -138,111 +172,92 @@ def estrai_timestamp_video(metadati):
         "TrackCreateDate",
     )
 
-    for campo in campi_timestamp:
-        valore = metadati.get(campo)
+    for field in timestamp_field:
+        value = metadata.get(field)
 
-        if valore:
-            return valore
+        if value:
+            return value
 
-    return "Data sconosciuta"
+    return "Unknown date"
 
 
-def scansiona_cartella_video(cartella_base, exiftool_path):
-    candidati = 0
-    con_gps = 0
-    senza_gps = 0
-    gps_non_validi = 0
-    non_leggibili = 0
+def scan_video_directory(base_directory, exiftool_path):
+    """Scan videos recursively and return files with valid GPS coordinates.
 
-    risultati_gps = []
+    Args:
+        base_directory: Root directory to scan.
+        exiftool_path: Path of the ExifTool executable.
 
-    for radice, cartelle, file_nomi in os.walk(cartella_base):
-        cartelle.sort()
-        file_nomi.sort()
+    Returns:
+        Tuples in the format
+        (latitude, longitude, relative_path, timestamp).
+    """
+    candidate_videos = 0
+    videos_with_valid_gps = 0
+    videos_without_gps = 0
+    videos_with_invalid_gps = 0
+    unreadable_videos = 0
 
-        for nome_file in file_nomi:
-            if not nome_file.lower().endswith(
-                ESTENSIONI_VIDEO
-            ):
+    gps_results = []
+
+    for root, directories, filenames in os.walk(base_directory):
+        directories.sort()
+        filenames.sort()
+
+        for filename in filenames:
+            if not filename.lower().endswith(
+                VIDEO_EXTENSION):
                 continue
 
-            candidati += 1
+            candidate_videos += 1
 
-            percorso_completo = os.path.join(
-                radice,
-                nome_file,
-            )
+            full_path = os.path.join(root,filename)
 
-            percorso_relativo = os.path.relpath(
-                percorso_completo,
-                cartella_base,
-            )
+            relative_path = os.path.relpath(full_path,base_directory)
 
             try:
-                metadati = estrai_metadati_video(
-                    percorso_completo,
-                    exiftool_path,
-                )
+                metadata = extract_video_metadata(full_path,exiftool_path)
 
-                gps_info = estrai_gps_info_video(
-                    metadati
-                )
+                gps_info = extract_video_gps_info(metadata)
 
                 if not gps_info:
-                    senza_gps += 1
+                    videos_without_gps += 1
                     continue
 
-                if (
-                    "GPSLatitude" not in gps_info
-                    or "GPSLongitude" not in gps_info
-                ):
-                    gps_non_validi += 1
+                if ("GPSLatitude" not in gps_info
+                    or "GPSLongitude" not in gps_info):
+                    videos_with_invalid_gps += 1
                     continue
 
-                latitudine = converti_coordinata_decimale(
+                latitude = validate_decimal_coordinate(
                     gps_info["GPSLatitude"],
                     -90.0,
                     90.0,
                 )
 
-                longitudine = converti_coordinata_decimale(
+                longitude = validate_decimal_coordinate(
                     gps_info["GPSLongitude"],
                     -180.0,
                     180.0,
                 )
 
-                if latitudine is None or longitudine is None:
-                    gps_non_validi += 1
+                if latitude is None or longitude is None:
+                    videos_with_invalid_gps += 1
                     continue
 
-                timestamp = estrai_timestamp_video(
-                    metadati
-                )
+                timestamp = extract_video_timestamp(metadata)
 
-                risultati_gps.append((
-                    latitudine,
-                    longitudine,
-                    percorso_relativo,
-                    timestamp,
-                ))
+                gps_results.append((latitude,longitude,relative_path,timestamp,))
 
-                con_gps += 1
+                videos_with_valid_gps += 1
 
-            except VideoNonLeggibileError:
-                non_leggibili += 1
+            except UnreadableVideoError:
+                unreadable_videos += 1
 
-    print("Video candidati: {}".format(candidati))
-    print("Video con GPS valido: {}".format(con_gps))
-    print("Video senza GPS: {}".format(senza_gps))
-    print(
-        "Video con GPS non valido: {}".format(
-            gps_non_validi
-        )
-    )
-    print(
-        "Video non leggibili/corrotti: {}".format(
-            non_leggibili
-        )
-    )
+    print("Candidate videos:", candidate_videos)
+    print("Videos with valid GPS:",videos_with_valid_gps)
+    print("Videos without GPS:",videos_without_gps)
+    print("Videos with invalid GPS:",videos_with_invalid_gps)
+    print("Unreadable or corrupt videos:",unreadable_videos)
 
-    return risultati_gps
+    return gps_results

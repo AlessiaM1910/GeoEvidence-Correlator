@@ -2,8 +2,8 @@ import os
 from core import filter_points
 from data_loader import load_csv, load_json
 from exif_loader import scan_image_directory
-from video_loader import scansiona_cartella_video
-from report import (classifica_reperti,evidenze_da_foto,evidenze_da_video,evidenze_da_punti,scrivi_report_csv)
+from video_loader import scan_video_directory
+from report import (classify_evidence,evidence_from_images,evidence_from_videos,evidence_from_points,write_csv_report)
 
 
 
@@ -58,7 +58,7 @@ def main():
     punti_csv=load_csv(percorso_csv)
     punti_json=load_json(percorso_json)
     evidenze_foto = scan_image_directory(cartella_foto)
-    evidenze_video = scansiona_cartella_video(cartella_video,percorso_exiftool)
+    evidenze_video = scan_video_directory(cartella_video,percorso_exiftool)
 
     punti_foto = []  #qui effettuiamo conversione nel formato richiesto dalla funzione filtra punti
 
@@ -76,7 +76,7 @@ def main():
 
     tutti_punti=punti_csv + punti_json + punti_foto + punti_video #questo rimane utile per la funzione filtra punti
 
-    evidenze_report= evidenze_da_punti(punti_csv,"CSV") + evidenze_da_punti(punti_json, "JSON") + evidenze_da_foto(evidenze_foto) + evidenze_da_video(evidenze_video) #contiene tutte le informazioni che servono nel CSV
+    evidenze_report= evidence_from_points(punti_csv,"CSV") + evidence_from_points(punti_json, "JSON") + evidence_from_images(evidenze_foto) + evidence_from_videos(evidenze_video) #contiene tutte le informazioni che servono nel CSV
 
     if len(tutti_punti)== 0:
         print("Nessun punto caricato")
@@ -84,11 +84,11 @@ def main():
 
     lat_centro, lon_centro, raggiokm= chiedi_parametri_ricerca() #prendo i parametri da input
 
-    righe_report = classifica_reperti(evidenze_report,lat_centro,lon_centro,raggiokm)
+    righe_report = classify_evidence(evidenze_report,lat_centro,lon_centro,raggiokm)
 
     percorso_report = os.path.join(cartella,"report_geoevidence.csv")
 
-    scrivi_report_csv(percorso_report,righe_report)
+    write_csv_report(percorso_report,righe_report)
 
     print("Report creato:", percorso_report)
 
