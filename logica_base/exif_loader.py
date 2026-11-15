@@ -204,7 +204,7 @@ def scan_image_directory(base_directory):
                                 valid_gps_image += 1
 
                     else:
-                        senza_gps += 1
+                        without_gps += 1
                         
                 except UnreadableImageError:
                     unreadable_images += 1  # File corrotto
