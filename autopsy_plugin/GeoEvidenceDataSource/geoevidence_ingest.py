@@ -6,7 +6,10 @@ create GeoEvidence Blackboard artifacts.
 """
 
 import inspect
+from java.util import ArrayList
 
+from georange import Coordinate
+from org.sleuthkit.datamodel import Score
 from java.util.logging import Level
 
 from org.sleuthkit.autopsy.casemodule import Case
@@ -24,7 +27,9 @@ MODULE_NAME = "GeoEvidence Data Source"
 
 # JPEG and MP4/MOV are the validated first scope of the project.
 SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".mp4", ".mov")
-
+CENTER_LATITUDE = 39.375155
+CENTER_LONGITUDE = 16.271693
+RADIUS_KM = 1.0
 
 class GeoEvidenceDataSourceFactory(IngestModuleFactoryAdapter):
     """Describe the GeoEvidence Data Source module to Autopsy."""
@@ -69,9 +74,10 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
         self.log(Level.INFO, "GeoEvidence Data Source started.")
 
     def process(self, data_source, progress_bar):
-        """Find JPEG, MP4 and MOV files in one Autopsy data source."""
+        case = Case.getCurrentCase()
 
-        file_manager = Case.getCurrentCase().getServices().getFileManager()
+        file_manager = case.getServices().getFileManager()
+
         media_files = []
         seen_file_ids = set()
 
@@ -110,55 +116,213 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
             if self.context.isJobCancelled():
                 return IngestModule.ProcessResult.OK
 
-            self.log(
-                Level.INFO,
-                "Media file found: " + abstract_file.getName(),
-            )
-
             progress_bar.progress(index + 1)
 
-        blackboard = (
-            Case.getCurrentCase()
-            .getSleuthkitCase()
-            .getBlackboard()
-        )
+        blackboard = case.getSleuthkitCase().getBlackboard()
 
         exif_artifacts = blackboard.getArtifacts(
             BlackboardArtifact.Type.TSK_METADATA_EXIF.getTypeID(),
             data_source.getId(),
         )
 
+        center = Coordinate(
+            CENTER_LATITUDE,
+            CENTER_LONGITUDE,
+        )
+
         photos_with_valid_gps = 0
         photos_without_usable_gps = 0
+        inside_radius = 0
+        outside_radius = 0
+        bookmarks_created = 0
+        bookmarks_already_present = 0
+        inside_items_created = 0
+        inside_items_already_present = 0
 
-        for artifact in exif_artifacts:
-            latitude_attribute = artifact.getAttribute(
+        for exif_artifact in exif_artifacts:
+            latitude_attribute = exif_artifact.getAttribute(
                 BlackboardAttribute.Type.TSK_GEO_LATITUDE
             )
 
-            longitude_attribute = artifact.getAttribute(
+            longitude_attribute = exif_artifact.getAttribute(
                 BlackboardAttribute.Type.TSK_GEO_LONGITUDE
             )
 
             if (
-                latitude_attribute is not None
-                and longitude_attribute is not None
+                latitude_attribute is None
+                or longitude_attribute is None
             ):
-                photos_with_valid_gps += 1
-            else:
                 photos_without_usable_gps += 1
+                continue
+
+            try:
+                point = Coordinate(
+                    latitude_attribute.getValueDouble(),
+                    longitude_attribute.getValueDouble(),
+                )
+            except ValueError:
+                photos_without_usable_gps += 1
+                continue
+
+            source_file = case.getSleuthkitCase().getAbstractFileById(
+                exif_artifact.getObjectID()
+            )
+
+            if source_file is None:
+                continue
+
+            distance_km = point.distance_to(center, "km")
+
+            if distance_km <= RADIUS_KM:
+                classification = "INSIDE_RADIUS"
+                inside_radius += 1
+            else:
+                classification = "OUTSIDE_RADIUS"
+                outside_radius += 1
+
+            photos_with_valid_gps += 1
+
+            attributes = ArrayList()
+
+            attributes.add(
+                BlackboardAttribute(
+                    BlackboardAttribute.Type.TSK_GEO_LATITUDE,
+                    MODULE_NAME,
+                    point.lat,
+                )
+            )
+
+            attributes.add(
+                BlackboardAttribute(
+                    BlackboardAttribute.Type.TSK_GEO_LONGITUDE,
+                    MODULE_NAME,
+                    point.lon,
+                )
+            )
+
+            attributes.add(
+                BlackboardAttribute(
+                    BlackboardAttribute.Type.TSK_NAME,
+                    MODULE_NAME,
+                    source_file.getName(),
+                )
+            )
+
+            attributes.add(
+                BlackboardAttribute(
+                    BlackboardAttribute.Type.TSK_COMMENT,
+                    MODULE_NAME,
+                    "Distance: %.3f km | %s" % (
+                        distance_km,
+                        classification,
+                    ),
+                )
+            )
+
+            if classification == "INSIDE_RADIUS":
+                inside_attributes = ArrayList()
+
+                inside_attributes.add(
+                    BlackboardAttribute(
+                        BlackboardAttribute.Type.TSK_SET_NAME,
+                        MODULE_NAME,
+                        "GeoEvidence - Inside radius",
+                    )
+                )
+
+                inside_attributes.add(
+                    BlackboardAttribute(
+                        BlackboardAttribute.Type.TSK_COMMENT,
+                        MODULE_NAME,
+                        "Distance: %.3f km | INSIDE_RADIUS" % (
+                            distance_km,
+                        ),
+                    )
+                )
+
+                if blackboard.artifactExists(
+                    source_file,
+                    BlackboardArtifact.Type.TSK_INTERESTING_ITEM,
+                    inside_attributes,
+                ):
+                    inside_items_already_present += 1
+                else:
+                    try:
+                        inside_item = source_file.newAnalysisResult(
+                            BlackboardArtifact.Type.TSK_INTERESTING_ITEM,
+                            Score.SCORE_LIKELY_NOTABLE,
+                            None,
+                            "GeoEvidence - Inside radius",
+                            None,
+                            inside_attributes,
+                        ).getAnalysisResult()
+
+                        blackboard.postArtifact(
+                            inside_item,
+                            MODULE_NAME,
+                        )
+
+                        inside_items_created += 1
+
+                    except Exception as error:
+                        self.log(
+                            Level.SEVERE,
+                            "Unable to create inside-radius result for "
+                            + source_file.getName()
+                            + ": "
+                            + str(error),
+                        )
+
+            if blackboard.artifactExists(
+                source_file,
+                BlackboardArtifact.Type.TSK_GPS_BOOKMARK,
+                attributes,
+            ):
+                bookmarks_already_present += 1
+                continue
+
+            try:
+                bookmark = source_file.newDataArtifact(
+                    BlackboardArtifact.Type.TSK_GPS_BOOKMARK,
+                    attributes,
+                )
+
+                blackboard.postArtifact(
+                    bookmark,
+                    MODULE_NAME,
+                )
+
+                bookmarks_created += 1
+
+            except Exception as error:
+                self.log(
+                    Level.SEVERE,
+                    "Unable to create GPS bookmark for "
+                    + source_file.getName()
+                    + ": "
+                    + str(error),
+                )
 
         message = IngestMessage.createMessage(
             IngestMessage.MessageType.DATA,
             MODULE_NAME,
-            ("Media files found: "
+            (
+                "Media: "
                 + str(len(media_files))
-                + " | EXIF artifacts: "
-                + str(len(exif_artifacts))
-                + " | Photos with valid GPS: "
+                + " | GPS: "
                 + str(photos_with_valid_gps)
-                + " | Photos without usable GPS: "
-                + str(photos_without_usable_gps)
+                + " | Inside: "
+                + str(inside_radius)
+                + " | Outside: "
+                + str(outside_radius)
+                + " | New bookmarks: "
+                + str(bookmarks_created)
+                + " | Existing bookmarks: "
+                + str(bookmarks_already_present)
+                + " | New inside items: "
+                + str(inside_items_created)
+                + " | Existing inside items: "
+                + str(inside_items_already_present)
             ),
         )
 

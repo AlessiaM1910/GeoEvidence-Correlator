@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import math
 
 #sviluppata con riferimento a metri, poi si fa conversione o in km o in miglia
