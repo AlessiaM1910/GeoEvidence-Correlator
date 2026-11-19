@@ -1,8 +1,19 @@
-"""First Data Source Ingest Module for GeoEvidence.
+"""GeoEvidence Data Source Ingest Module for Autopsy.
 
-This checkpoint only discovers supported media and reports their count. This checkpoint counts supported media and reads existing EXIF coordinate
-results produced by Picture Analyzer. It does not yet invoke ExifTool or
-create GeoEvidence Blackboard artifacts.
+Finds JPEG and MP4/MOV files in a data source and checks whether their
+GPS position falls inside a search radius around a given center.
+
+Photos are read directly with the metadata-extractor library bundled
+with Autopsy. Videos are exported to a temporary copy and read with
+ExifTool. No other ingest module (for example Picture Analyzer) has to
+run first.
+
+For every file with valid GPS coordinates the module creates a GPS
+Bookmark. Files inside the radius also get an Interesting Item. Both
+record the center and the radius used, so a run with different
+parameters creates new results instead of being skipped.
+
+Center, radius and the ExifTool path are fixed constants for now.
 """
 
 import inspect
@@ -74,10 +85,10 @@ def remove_quietly(path):
     except Exception:
         pass
 
-def post_summary(text):
+def post_summary(text, message_type=IngestMessage.MessageType.DATA):
     """Show one short line in the Autopsy Ingest Inbox."""
     message = IngestMessage.createMessage(
-        IngestMessage.MessageType.DATA,
+        message_type,
         MODULE_NAME,
         text,
     )
@@ -179,8 +190,8 @@ class GeoEvidenceDataSourceFactory(IngestModuleFactoryAdapter):
 
     def getModuleDescription(self):
         return (
-            "Initial GeoEvidence data-source module. "
-            "It finds and counts supported images and videos in the data source."
+            "Finds geotagged photos and videos and flags those "
+            "inside a search radius."
         )
 
     def getModuleVersionNumber(self):
@@ -264,8 +275,12 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
         
         parameters = "Center: %.6f, %.6f | Radius: %.3f km" % (CENTER_LATITUDE, CENTER_LONGITUDE, RADIUS_KM)
         
-        work_directory = os.path.join(
-            case.getTempDirectory(), "geoevidence")
+        work_directory = os.path.join(case.getTempDirectory(), "geoevidence")
+        
+        exiftool_available = os.path.isfile(EXIFTOOL_PATH)
+
+        videos_skipped = 0
+
         if not os.path.exists(work_directory):
             try:
                 os.makedirs(work_directory)
@@ -292,9 +307,10 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
             if file_name.endswith(PHOTO_EXTENSIONS):
                 status, latitude, longitude = read_photo_gps(source_file)
             elif file_name.endswith(VIDEO_EXTENSION):
-                status, latitude, longitude = read_video_gps(
-                    source_file, work_directory
-                )
+                if not exiftool_available:
+                    videos_skipped += 1
+                    continue
+                status, latitude, longitude = read_video_gps(source_file, work_directory)
             else:
                 continue
 
@@ -474,6 +490,16 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
             )
         )
 
-        IngestServices.getInstance().postMessage(message)
+        if videos_skipped > 0:
+            self.log(
+                Level.SEVERE,
+                "ExifTool not found at " + EXIFTOOL_PATH
+                + ": " + str(videos_skipped) + " video(s) skipped.",
+            )
+            post_summary(
+                "WARNING: ExifTool not found, %d video(s) skipped"
+                % videos_skipped,
+                IngestMessage.MessageType.WARNING,
+            )
 
         return IngestModule.ProcessResult.OK
