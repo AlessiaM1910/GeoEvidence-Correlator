@@ -22,6 +22,8 @@ from video_loader import (
     extract_video_metadata,
     extract_video_timestamp,
     validate_decimal_coordinate,
+    classify_video_metadata,
+    NO_GPS,INVALID_GPS,VALID_GPS
 )
 
 
@@ -264,7 +266,80 @@ class TestVideoLoader(unittest.TestCase):
                         "video.mp4",
                         "exiftool.exe",
                     )
+                    
+    def test_classify_valid_gps_video(self):
+        metadata = {
+            "FileType": "MP4",
+            "GPSLatitude": 39.375155,
+            "GPSLongitude": 16.271693,
+            "GPSAltitude": 100,
+            "CreationDate": "2026:01:01 10:01:00+01:00",
+            "MediaCreateDate": "0000:00:00 00:00:00",
+        }
 
+        status, latitude, longitude, timestamp = (
+            classify_video_metadata(metadata)
+        )
+
+        self.assertEqual(status, VALID_GPS)
+        self.assertEqual(latitude, 39.375155)
+        self.assertEqual(longitude, 16.271693)
+        self.assertEqual(timestamp, "2026:01:01 10:01:00+01:00")
+
+    def test_classify_video_without_gps(self):
+        metadata = {
+            "FileType": "MP4",
+            "CreationDate": "2026:01:01 11:16:00+01:00",
+            "MediaCreateDate": "0000:00:00 00:00:00",
+        }
+
+        status, latitude, longitude, timestamp = (
+            classify_video_metadata(metadata)
+        )
+
+        self.assertEqual(status, NO_GPS)
+        self.assertIsNone(latitude)
+        self.assertIsNone(longitude)
+        self.assertEqual(timestamp, "2026:01:01 11:16:00+01:00")
+
+    def test_classify_altitude_only_is_no_gps(self):
+        metadata = {"FileType": "MP4", "GPSAltitude": 100}
+
+        status, latitude, longitude, timestamp = (
+            classify_video_metadata(metadata)
+        )
+
+        self.assertEqual(status, NO_GPS)
+
+    def test_classify_incomplete_gps(self):
+        metadata = {"FileType": "MP4", "GPSLatitude": 39.8244}
+
+        self.assertEqual(
+            classify_video_metadata(metadata)[0], INVALID_GPS
+        )
+
+    def test_classify_gps_out_of_range(self):
+        metadata = {
+            "FileType": "MP4",
+            "GPSLatitude": 91.0,
+            "GPSLongitude": 16.194,
+        }
+
+        self.assertEqual(
+            classify_video_metadata(metadata)[0], INVALID_GPS
+        )
+
+    def test_zero_dates_are_ignored(self):
+        metadata = {
+            "FileType": "MP4",
+            "MediaCreateDate": "0000:00:00 00:00:00",
+            "CreateDate": "0000:00:00 00:00:00",
+            "TrackCreateDate": "0000:00:00 00:00:00",
+        }
+
+        self.assertEqual(
+            extract_video_timestamp(metadata), "Unknown date"
+        )
 
 if __name__ == "__main__":
     unittest.main()

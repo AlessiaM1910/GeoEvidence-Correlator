@@ -16,6 +16,9 @@ class ExifToolUnavailableError(Exception):
 
 VIDEO_EXTENSION = (".mp4", ".mov")
 SUPPORTED_VIDEO_TYPES = ("MP4", "MOV")
+VALID_GPS = "VALID_GPS"
+NO_GPS = "NO_GPS"
+INVALID_GPS = "INVALID_GPS"
 
 EXIFTOOL_FIELDS = (
     "-FileType",
@@ -151,6 +154,9 @@ def validate_decimal_coordinate(value, minimum, maximum):
 
     return coordinate
 
+def is_zero_date(value):
+    """Return True for the placeholder dates written by ExifTool."""
+    return str(value).startswith("0000:00:00")
 
 def extract_video_timestamp(metadata):
     """Extract the preferred timestamp from video metadata.
@@ -175,10 +181,53 @@ def extract_video_timestamp(metadata):
     for field in timestamp_field:
         value = metadata.get(field)
 
-        if value:
+        if value and not is_zero_date(value):
             return value
 
     return "Unknown date"
+
+def classify_video_metadata(metadata):
+    """Classify the GPS data found in the metadata of one video.
+
+    Args:
+        metadata: Metadata dictionary returned by ExifTool.
+
+    Returns:
+        A tuple (status, latitude, longitude, timestamp). Status is
+        VALID_GPS, NO_GPS or INVALID_GPS. Latitude and longitude are
+        None unless the status is VALID_GPS.
+    """
+    timestamp = extract_video_timestamp(metadata)
+    gps_info = extract_video_gps_info(metadata)
+
+    has_position = (
+        gps_info is not None
+        and (
+            "GPSLatitude" in gps_info
+            or "GPSLongitude" in gps_info
+        )
+    )
+
+    if not has_position:
+        return NO_GPS, None, None, timestamp
+
+    if (
+        "GPSLatitude" not in gps_info
+        or "GPSLongitude" not in gps_info
+    ):
+        return INVALID_GPS, None, None, timestamp
+
+    latitude = validate_decimal_coordinate(
+        gps_info["GPSLatitude"], -90.0, 90.0
+    )
+    longitude = validate_decimal_coordinate(
+        gps_info["GPSLongitude"], -180.0, 180.0
+    )
+
+    if latitude is None or longitude is None:
+        return INVALID_GPS, None, None, timestamp
+
+    return VALID_GPS, latitude, longitude, timestamp
 
 
 def scan_video_directory(base_directory, exiftool_path):
@@ -218,36 +267,19 @@ def scan_video_directory(base_directory, exiftool_path):
             try:
                 metadata = extract_video_metadata(full_path,exiftool_path)
 
-                gps_info = extract_video_gps_info(metadata)
+                status, latitude, longitude, timestamp = (classify_video_metadata(metadata))
 
-                if not gps_info:
+                if status == NO_GPS:
                     videos_without_gps += 1
                     continue
 
-                if ("GPSLatitude" not in gps_info
-                    or "GPSLongitude" not in gps_info):
+                if status == INVALID_GPS:
                     videos_with_invalid_gps += 1
                     continue
 
-                latitude = validate_decimal_coordinate(
-                    gps_info["GPSLatitude"],
-                    -90.0,
-                    90.0,
+                gps_results.append(
+                    (latitude, longitude, relative_path, timestamp)
                 )
-
-                longitude = validate_decimal_coordinate(
-                    gps_info["GPSLongitude"],
-                    -180.0,
-                    180.0,
-                )
-
-                if latitude is None or longitude is None:
-                    videos_with_invalid_gps += 1
-                    continue
-
-                timestamp = extract_video_timestamp(metadata)
-
-                gps_results.append((latitude,longitude,relative_path,timestamp,))
 
                 videos_with_valid_gps += 1
 
