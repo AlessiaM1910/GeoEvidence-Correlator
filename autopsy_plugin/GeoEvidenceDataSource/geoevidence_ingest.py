@@ -21,6 +21,10 @@ from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
 from org.sleuthkit.autopsy.ingest import IngestServices
 from org.sleuthkit.datamodel import BlackboardArtifact
 from org.sleuthkit.datamodel import BlackboardAttribute
+from java.lang import Throwable
+from org.sleuthkit.datamodel import ReadContentInputStream
+from com.drew.imaging import ImageMetadataReader
+from com.drew.metadata.exif import GpsDirectory
 
 
 MODULE_NAME = "GeoEvidence Data Source"
@@ -30,6 +34,44 @@ SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".mp4", ".mov")
 CENTER_LATITUDE = 39.375155
 CENTER_LONGITUDE = 16.271693
 RADIUS_KM = 1.0
+PHOTO_EXTENSIONS = (".jpg", ".jpeg")
+
+VALID_GPS = "VALID_GPS"
+NO_GPS = "NO_GPS"
+INVALID_GPS = "INVALID_GPS"
+UNREADABLE = "UNREADABLE"
+
+
+def read_photo_gps(abstract_file):
+    """Return (status, latitude, longitude) for one photo."""
+    try:
+        stream = ReadContentInputStream(abstract_file)
+        try:
+            metadata = ImageMetadataReader.readMetadata(stream)
+        finally:
+            stream.close()
+
+        gps = metadata.getFirstDirectoryOfType(GpsDirectory)
+        if gps is None:
+            return NO_GPS, None, None
+
+        location = gps.getGeoLocation()
+        if location is None:
+            return INVALID_GPS, None, None
+
+        latitude = location.getLatitude()
+        longitude = location.getLongitude()
+
+        if not (-90.0 <= latitude <= 90.0
+                and -180.0 <= longitude <= 180.0):
+            return INVALID_GPS, None, None
+
+        return VALID_GPS, latitude, longitude
+
+    except Throwable:
+        return UNREADABLE, None, None
+    except Exception:
+        return UNREADABLE, None, None
 
 class GeoEvidenceDataSourceFactory(IngestModuleFactoryAdapter):
     """Describe the GeoEvidence Data Source module to Autopsy."""
@@ -120,11 +162,6 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
 
         blackboard = case.getSleuthkitCase().getBlackboard()
 
-        exif_artifacts = blackboard.getArtifacts(
-            BlackboardArtifact.Type.TSK_METADATA_EXIF.getTypeID(),
-            data_source.getId(),
-        )
-
         center = Coordinate(
             CENTER_LATITUDE,
             CENTER_LONGITUDE,
@@ -138,38 +175,34 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
         bookmarks_already_present = 0
         inside_items_created = 0
         inside_items_already_present = 0
+        photos_no_gps = 0
+        photos_invalid_gps = 0
+        photos_unreadable = 0
 
-        for exif_artifact in exif_artifacts:
-            latitude_attribute = exif_artifact.getAttribute(
-                BlackboardAttribute.Type.TSK_GEO_LATITUDE
-            )
+        for source_file in media_files:
+            if self.context.isJobCancelled():
+                return IngestModule.ProcessResult.OK
 
-            longitude_attribute = exif_artifact.getAttribute(
-                BlackboardAttribute.Type.TSK_GEO_LONGITUDE
-            )
-
-            if (
-                latitude_attribute is None
-                or longitude_attribute is None
+            if not source_file.getName().lower().endswith(
+                PHOTO_EXTENSIONS
             ):
-                photos_without_usable_gps += 1
                 continue
 
-            try:
-                point = Coordinate(
-                    latitude_attribute.getValueDouble(),
-                    longitude_attribute.getValueDouble(),
-                )
-            except ValueError:
-                photos_without_usable_gps += 1
+            status, latitude, longitude = read_photo_gps(source_file)
+
+            if status == NO_GPS:
+                photos_no_gps += 1
                 continue
 
-            source_file = case.getSleuthkitCase().getAbstractFileById(
-                exif_artifact.getObjectID()
-            )
-
-            if source_file is None:
+            if status == INVALID_GPS:
+                photos_invalid_gps += 1
                 continue
+
+            if status == UNREADABLE:
+                photos_unreadable += 1
+                continue
+
+            point = Coordinate(latitude, longitude)
 
             distance_km = point.distance_to(center, "km")
 
@@ -323,6 +356,12 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                 + str(inside_items_created)
                 + " | Existing inside items: "
                 + str(inside_items_already_present)
+                + " | No GPS: "
+                + str(photos_no_gps)
+                + " | Invalid GPS: "
+                + str(photos_invalid_gps)
+                + " | Unreadable: "
+                + str(photos_unreadable)
             ),
         )
 
