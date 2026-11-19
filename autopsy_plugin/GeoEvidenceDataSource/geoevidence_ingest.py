@@ -263,12 +263,6 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
 
         progress_bar.switchToDeterminate(len(media_files))
 
-        for index, abstract_file in enumerate(media_files):
-            if self.context.isJobCancelled():
-                return IngestModule.ProcessResult.OK
-
-            progress_bar.progress(index + 1)
-
         blackboard = case.getSleuthkitCase().getBlackboard()
 
         center = Coordinate(CENTER_LATITUDE,CENTER_LONGITUDE)
@@ -298,9 +292,11 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
         media_invalid_gps = 0
         media_unreadable = 0
 
-        for source_file in media_files:
+        for index, source_file in enumerate(media_files):
             if self.context.isJobCancelled():
                 return IngestModule.ProcessResult.OK
+
+            progress_bar.progress(index + 1)
 
             file_name = source_file.getName().lower()
 
