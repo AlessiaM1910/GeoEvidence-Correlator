@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 import os
 import subprocess
@@ -140,7 +141,7 @@ def validate_decimal_coordinate(value, minimum, maximum):
     """
 
     """
-    ExifTool con -n restituisce già coordinate decimali.
+    ExifTool con -n restituisce gia coordinate decimali.
     Qui controlliamo che siano numeri validi e nel range terrestre.
     """
 

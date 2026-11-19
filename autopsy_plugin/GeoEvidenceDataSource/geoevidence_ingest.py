@@ -25,7 +25,21 @@ from java.lang import Throwable
 from org.sleuthkit.datamodel import ReadContentInputStream
 from com.drew.imaging import ImageMetadataReader
 from com.drew.metadata.exif import GpsDirectory
+import json
+import os
+from java.io import File
+from java.lang import ProcessBuilder
+from java.util.concurrent import TimeUnit
+from org.sleuthkit.autopsy.datamodel import ContentUtils
 
+from video_loader import (
+    EXIFTOOL_FIELDS,
+    INVALID_GPS,
+    NO_GPS,
+    SUPPORTED_VIDEO_TYPES,
+    VALID_GPS,
+    VIDEO_EXTENSION,
+    classify_video_metadata)
 
 MODULE_NAME = "GeoEvidence Data Source"
 
@@ -36,10 +50,94 @@ CENTER_LONGITUDE = 16.271693
 RADIUS_KM = 1.0
 PHOTO_EXTENSIONS = (".jpg", ".jpeg")
 
-VALID_GPS = "VALID_GPS"
-NO_GPS = "NO_GPS"
-INVALID_GPS = "INVALID_GPS"
 UNREADABLE = "UNREADABLE"
+# For now the path is fixed; it will become a user setting later.
+EXIFTOOL_PATH = (
+    r"C:\Users\aless\Downloads\exiftool-13.59_64"
+    r"\exiftool-13.59_64\exiftool.exe"
+)
+EXIFTOOL_TIMEOUT_SECONDS = 60
+
+
+def read_text(path):
+    handle = open(path, "r")
+    try:
+        return handle.read()
+    finally:
+        handle.close()
+
+
+def remove_quietly(path):
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception:
+        pass
+
+def post_summary(text):
+    """Show one short line in the Autopsy Ingest Inbox."""
+    message = IngestMessage.createMessage(
+        IngestMessage.MessageType.DATA,
+        MODULE_NAME,
+        text,
+    )
+    IngestServices.getInstance().postMessage(message)
+
+def read_video_gps(abstract_file, work_directory):
+    """Return (status, latitude, longitude) for one video via ExifTool."""
+    name = abstract_file.getName().lower()
+    extension = ".mov" if name.endswith(".mov") else ".mp4"
+
+    base = os.path.join(work_directory, str(abstract_file.getId()))
+    video_copy = base + extension
+    out_path = base + ".out.txt"
+    err_path = base + ".err.txt"
+
+    try:
+        ContentUtils.writeToFile(abstract_file, File(video_copy))
+
+        command = ArrayList()
+        command.add(EXIFTOOL_PATH)
+        command.add("-j")
+        command.add("-n")
+        command.add("-s")
+        for field in EXIFTOOL_FIELDS:
+            command.add(field)
+        command.add(video_copy)
+
+        builder = ProcessBuilder(command)
+        builder.redirectOutput(File(out_path))
+        builder.redirectError(File(err_path))
+        process = builder.start()
+
+        if not process.waitFor(EXIFTOOL_TIMEOUT_SECONDS, TimeUnit.SECONDS):
+            process.destroyForcibly()
+            return UNREADABLE, None, None
+
+        if process.exitValue() != 0:
+            return UNREADABLE, None, None
+
+        metadata_list = json.loads(read_text(out_path))
+        if not metadata_list:
+            return UNREADABLE, None, None
+
+        metadata = metadata_list[0]
+        if metadata.get("FileType") not in SUPPORTED_VIDEO_TYPES:
+            return UNREADABLE, None, None
+
+        status, latitude, longitude, timestamp = (
+            classify_video_metadata(metadata)
+        )
+        return status, latitude, longitude
+
+    except Throwable:
+        return UNREADABLE, None, None
+    except Exception:
+        return UNREADABLE, None, None
+    finally:
+        remove_quietly(video_copy)
+        remove_quietly(out_path)
+        remove_quietly(err_path)
 
 
 def read_photo_gps(abstract_file):
@@ -162,44 +260,54 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
 
         blackboard = case.getSleuthkitCase().getBlackboard()
 
-        center = Coordinate(
-            CENTER_LATITUDE,
-            CENTER_LONGITUDE,
-        )
+        center = Coordinate(CENTER_LATITUDE,CENTER_LONGITUDE)
+        
+        parameters = "Center: %.6f, %.6f | Radius: %.3f km" % (CENTER_LATITUDE, CENTER_LONGITUDE, RADIUS_KM)
+        
+        work_directory = os.path.join(
+            case.getTempDirectory(), "geoevidence")
+        if not os.path.exists(work_directory):
+            try:
+                os.makedirs(work_directory)
+            except Exception:
+                pass
 
-        photos_with_valid_gps = 0
-        photos_without_usable_gps = 0
+        media_with_valid_gps = 0
         inside_radius = 0
         outside_radius = 0
         bookmarks_created = 0
         bookmarks_already_present = 0
         inside_items_created = 0
         inside_items_already_present = 0
-        photos_no_gps = 0
-        photos_invalid_gps = 0
-        photos_unreadable = 0
+        media_no_gps = 0
+        media_invalid_gps = 0
+        media_unreadable = 0
 
         for source_file in media_files:
             if self.context.isJobCancelled():
                 return IngestModule.ProcessResult.OK
 
-            if not source_file.getName().lower().endswith(
-                PHOTO_EXTENSIONS
-            ):
+            file_name = source_file.getName().lower()
+
+            if file_name.endswith(PHOTO_EXTENSIONS):
+                status, latitude, longitude = read_photo_gps(source_file)
+            elif file_name.endswith(VIDEO_EXTENSION):
+                status, latitude, longitude = read_video_gps(
+                    source_file, work_directory
+                )
+            else:
                 continue
 
-            status, latitude, longitude = read_photo_gps(source_file)
-
             if status == NO_GPS:
-                photos_no_gps += 1
+                media_no_gps += 1
                 continue
 
             if status == INVALID_GPS:
-                photos_invalid_gps += 1
+                media_invalid_gps += 1
                 continue
 
             if status == UNREADABLE:
-                photos_unreadable += 1
+                media_unreadable += 1
                 continue
 
             point = Coordinate(latitude, longitude)
@@ -213,7 +321,7 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                 classification = "OUTSIDE_RADIUS"
                 outside_radius += 1
 
-            photos_with_valid_gps += 1
+            media_with_valid_gps += 1
 
             attributes = ArrayList()
 
@@ -245,12 +353,13 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                 BlackboardAttribute(
                     BlackboardAttribute.Type.TSK_COMMENT,
                     MODULE_NAME,
-                    "Distance: %.3f km | %s" % (
+                        "Distance: %.3f km | %s | %s" % (
                         distance_km,
                         classification,
+                        parameters,
+                    ),
                     ),
                 )
-            )
 
             if classification == "INSIDE_RADIUS":
                 inside_attributes = ArrayList()
@@ -267,8 +376,9 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                     BlackboardAttribute(
                         BlackboardAttribute.Type.TSK_COMMENT,
                         MODULE_NAME,
-                        "Distance: %.3f km | INSIDE_RADIUS" % (
+                        "Distance: %.3f km | INSIDE_RADIUS | %s" % (
                             distance_km,
+                            parameters,
                         ),
                     )
                 )
@@ -336,33 +446,32 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                     + str(error),
                 )
 
-        message = IngestMessage.createMessage(
-            IngestMessage.MessageType.DATA,
-            MODULE_NAME,
-            (
-                "Media: "
-                + str(len(media_files))
-                + " | GPS: "
-                + str(photos_with_valid_gps)
-                + " | Inside: "
-                + str(inside_radius)
-                + " | Outside: "
-                + str(outside_radius)
-                + " | New bookmarks: "
-                + str(bookmarks_created)
-                + " | Existing bookmarks: "
-                + str(bookmarks_already_present)
-                + " | New inside items: "
-                + str(inside_items_created)
-                + " | Existing inside items: "
-                + str(inside_items_already_present)
-                + " | No GPS: "
-                + str(photos_no_gps)
-                + " | Invalid GPS: "
-                + str(photos_invalid_gps)
-                + " | Unreadable: "
-                + str(photos_unreadable)
-            ),
+        post_summary("Parameters: " + parameters)
+        post_summary(
+            "Media: %d | GPS: %d | Inside: %d | Outside: %d" % (
+                len(media_files),
+                media_with_valid_gps,
+                inside_radius,
+                outside_radius,
+            )
+        )
+
+        post_summary(
+            "Bookmarks: %d new, %d existing"
+            " | Inside items: %d new, %d existing" % (
+                bookmarks_created,
+                bookmarks_already_present,
+                inside_items_created,
+                inside_items_already_present,
+            )
+        )
+
+        post_summary(
+            "Not usable: No GPS %d | Invalid GPS %d | Unreadable %d" % (
+                media_no_gps,
+                media_invalid_gps,
+                media_unreadable,
+            )
         )
 
         IngestServices.getInstance().postMessage(message)
