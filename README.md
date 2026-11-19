@@ -17,14 +17,21 @@
 
 ## Struttura del progetto
 ```text
-
 GeoEvidence-Correlator/
 |
 |-- README.md                          # documentazione del progetto
 |
+|-- autopsy_plugin/
+|   `-- GeoEvidenceDataSource/
+|       |-- geoevidence_ingest.py      # Data Source Ingest Module (Jython)
+|       |-- georange.py                # copia di logica_base/georange.py
+|       `-- video_loader.py            # copia di logica_base/video_loader.py
+|
 |-- dati_test/
 |   |-- sorgenti/
 |   |   `-- base_cc0.jpg               # immagine base con licenza CC0
+|   |
+|   |-- exif_generati/                 # immagine singola generata dallo script di prova
 |   |
 |   |-- exif_sintetici/
 |   |   |-- manifest.json              # descrizione e risultati attesi di ogni immagine
@@ -49,13 +56,16 @@ GeoEvidence-Correlator/
     |-- georange.py                    # libreria per calcolo distanza geografica
     |-- core.py                        # filtraggio dei punti
     |-- data_loader.py                 # caricamento coordinate da JSON e CSV
-    |-- exif_loader.py                 # estrazione GPS e timestamp dalle immagini
-    |-- video_loader.py                # estrazione GPS e timestamp dai video
+    |-- exif_loader.py                 # estrazione GPS e timestamp dalle immagini (Pillow)
+    |-- video_loader.py                # estrazione e classificazione GPS dei video (ExifTool)
     |-- report.py                      # generazione report CSV
-    |-- main.py
+    |-- main.py                        # programma standalone
     |-- requirements.txt               # dipendenze Python necessarie
     |-- punti.csv                      # dati di esempio
     |-- punti.json                     # dati di esempio
+    |-- test_georange.py
+    |-- autopsy_plugin/
+    |   `-- geoevidence_video_ingest.py  # prototipo File Ingest (checkpoint)
     `-- tests/
         |-- test_core.py
         |-- test_data_loader.py
@@ -63,5 +73,6 @@ GeoEvidence-Correlator/
         |-- test_video_loader.py
         |-- test_report.py
         |-- test_dataset_sintetico.py
-        `-- test_dataset_video_sintetico.py
-        `-- test_integrazione_media.py
+        |-- test_dataset_video_sintetico.py
+        `-- test_flusso_completo.py
+```
