@@ -8,13 +8,24 @@ with Autopsy. Videos are exported to a temporary copy and read with
 ExifTool. No other ingest module (for example Picture Analyzer) has to
 run first.
 
-For every file with valid GPS coordinates the module creates a GPS
-Bookmark. Files inside the radius also get an Interesting Item. Both
-record the center and the radius used, so a run with different
-parameters creates new results instead of being skipped.
+The center (latitude and longitude), the radius and the path of ExifTool
+are set in the module settings before the ingest. The center has no
+default value: the ingest does not start until it is entered. ExifTool
+is needed only for videos; without it the videos are skipped and a
+warning is shown.
 
-Center and the ExifTool path are fixed constants for now. The search
-radius is set in the module settings before the ingest.
+For every analyzed file the module saves one "GeoEvidence Result" with
+the outcome (INSIDE_RADIUS, OUTSIDE_RADIUS, NO_GPS, INVALID_GPS,
+UNREADABLE or SKIPPED_NO_EXIFTOOL), the media type, the source, the
+date found in the metadata, the coordinates, the distance from the
+center and the search parameters. A result is identified by the file,
+the outcome, the source and the search parameters (center rounded to 6
+decimals, and radius). A repeated run with the same parameters creates
+no duplicates, while a run with different parameters creates new
+results.
+
+For every file with valid GPS coordinates the module also creates a GPS
+Bookmark, and the files inside the radius get an Interesting Item.
 """
 
 import inspect
@@ -64,7 +75,8 @@ from video_loader import (
     SUPPORTED_VIDEO_TYPES,
     VALID_GPS,
     VIDEO_EXTENSION,
-    classify_video_metadata)
+    classify_video_metadata,
+    is_zero_date)
 
 MODULE_NAME = "GeoEvidence Data Source"
 
@@ -146,8 +158,105 @@ def post_summary(text, message_type=IngestMessage.MessageType.INFO):
     )
     IngestServices.getInstance().postMessage(message)
 
+RESULT_ARTIFACT_NAME = "GEOEVIDENCE_RESULT"
+
+def register_result_types(blackboard):
+    """Create (or fetch) the custom result type and its attribute types."""
+    value_type = BlackboardAttribute.TSK_BLACKBOARD_ATTRIBUTE_VALUE_TYPE
+
+    definitions = [
+        ("status", "GEOEVIDENCE_STATUS", value_type.STRING, "Status"),
+        ("source", "GEOEVIDENCE_SOURCE", value_type.STRING, "Source"),
+        ("parameters", "GEOEVIDENCE_PARAMETERS", value_type.STRING,
+         "Search parameters"),
+        ("media_type", "GEOEVIDENCE_MEDIA_TYPE", value_type.STRING,
+         "Media type"),
+        ("timestamp", "GEOEVIDENCE_TIMESTAMP", value_type.STRING,
+         "Metadata date"),
+        ("distance_km", "GEOEVIDENCE_DISTANCE_KM", value_type.DOUBLE,
+         "Distance (km)"),
+        ("center_lat", "GEOEVIDENCE_CENTER_LAT", value_type.DOUBLE,
+         "Center latitude"),
+        ("center_lon", "GEOEVIDENCE_CENTER_LON", value_type.DOUBLE,
+         "Center longitude"),
+        ("radius_km", "GEOEVIDENCE_RADIUS_KM", value_type.DOUBLE,
+         "Radius (km)"),
+    ]
+
+    types = {}
+    for key, type_name, kind, display_name in definitions:
+        types[key] = blackboard.getOrAddAttributeType(
+            type_name, kind, display_name
+        )
+
+    types["artifact"] = blackboard.getOrAddArtifactType(
+        RESULT_ARTIFACT_NAME,
+        "GeoEvidence Result",
+        BlackboardArtifact.Category.DATA_ARTIFACT,
+    )
+
+    return types
+
+
+def post_result(blackboard, source_file, types, row):
+    """Save one result for a file. Return True if it was created."""
+    artifact_type = types["artifact"]
+
+    # Identity of a result: file, outcome, source and search parameters.
+    key_attributes = ArrayList()
+    for key in ("status", "source", "parameters"):
+        key_attributes.add(
+            BlackboardAttribute(types[key], MODULE_NAME, row[key])
+        )
+
+    if blackboard.artifactExists(source_file, artifact_type, key_attributes):
+        return False
+
+    attributes = ArrayList()
+    attributes.addAll(key_attributes)
+
+    for key in ("media_type", "timestamp"):
+        attributes.add(
+            BlackboardAttribute(types[key], MODULE_NAME, row[key])
+        )
+
+    for key in ("center_lat", "center_lon", "radius_km"):
+        attributes.add(
+            BlackboardAttribute(types[key], MODULE_NAME, float(row[key]))
+        )
+
+    if row["distance_km"] is not None:
+        attributes.add(
+            BlackboardAttribute(
+                types["distance_km"],
+                MODULE_NAME,
+                float(round(row["distance_km"], 3)),
+            )
+        )
+
+    if row["latitude"] is not None and row["longitude"] is not None:
+        attributes.add(
+            BlackboardAttribute(
+                BlackboardAttribute.Type.TSK_GEO_LATITUDE,
+                MODULE_NAME,
+                float(row["latitude"]),
+            )
+        )
+        attributes.add(
+            BlackboardAttribute(
+                BlackboardAttribute.Type.TSK_GEO_LONGITUDE,
+                MODULE_NAME,
+                float(row["longitude"]),
+            )
+        )
+
+    result = source_file.newDataArtifact(artifact_type, attributes)
+    blackboard.postArtifact(result, MODULE_NAME)
+    return True
+
+
 def read_video_gps(abstract_file, work_directory, exiftool_path):
-    """Return (status, latitude, longitude) for one video via ExifTool."""
+    """Return (status, latitude, longitude, timestamp) for one video via ExifTool."""
     name = abstract_file.getName().lower()
     extension = ".mov" if name.endswith(".mov") else ".mp4"
 
@@ -396,7 +505,7 @@ class GeoEvidenceDataSourceFactory(IngestModuleFactoryAdapter):
 
 
 class GeoEvidenceDataSourceModule(DataSourceIngestModule):
-    """Find supported media files and report their total."""
+    """Analyze photos and videos and save the results in the case."""
 
     logger = Logger.getLogger(MODULE_NAME)
 
@@ -490,6 +599,48 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
 
         blackboard = case.getSleuthkitCase().getBlackboard()
 
+        try:
+            result_types = register_result_types(blackboard)
+        except Throwable as error:
+            result_types = None
+            self.log(Level.SEVERE, "Unable to register the result type: " + str(error))
+        except Exception as error:
+            result_types = None
+            self.log(Level.SEVERE, "Unable to register the result type: " + str(error))
+
+        result_counts = [0, 0]  # created, already present
+
+        def save_result(source_file, status, source_name, media_type,
+                        timestamp, latitude, longitude, distance_km):
+            if result_types is None:
+                return
+
+            row = {
+                "status": status,
+                "source": source_name,
+                "parameters": parameters,
+                "media_type": media_type,
+                "timestamp": timestamp,
+                "distance_km": distance_km,
+                "latitude": latitude,
+                "longitude": longitude,
+                "center_lat": center.lat,
+                "center_lon": center.lon,
+                "radius_km": self.radius_km,
+            }
+
+            try:
+                if post_result(blackboard, source_file, result_types, row):
+                    result_counts[0] += 1
+                else:
+                    result_counts[1] += 1
+            except Throwable as error:
+                self.log(Level.SEVERE, "Unable to save the result for %s: %s"
+                         % (source_file.getName(), error))
+            except Exception as error:
+                self.log(Level.SEVERE, "Unable to save the result for %s: %s"
+                         % (source_file.getName(), error))
+
         center = self.center
 
         radius_label = "%g km" % self.radius_km
@@ -530,25 +681,39 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
             file_name = source_file.getName().lower()
 
             if file_name.endswith(PHOTO_EXTENSIONS):
+                media_type = "photo"
+                source_name = "metadata-extractor"
                 status, latitude, longitude, timestamp = read_photo_gps(source_file)
             elif file_name.endswith(VIDEO_EXTENSION):
+                media_type = "video"
+                source_name = "ExifTool"
                 if not exiftool_available:
                     videos_skipped += 1
+                    save_result(source_file, "SKIPPED_NO_EXIFTOOL",
+                                source_name, media_type, UNKNOWN_DATE,
+                                None, None, None)
                     continue
-                status, latitude, longitude, timestamp = read_video_gps(source_file, work_directory, self.exiftool_path)
+                status, latitude, longitude, timestamp = read_video_gps(
+                    source_file, work_directory, self.exiftool_path)
             else:
                 continue
 
             if status == NO_GPS:
                 media_no_gps += 1
+                save_result(source_file, status, source_name, media_type,
+                            timestamp, None, None, None)
                 continue
 
             if status == INVALID_GPS:
                 media_invalid_gps += 1
+                save_result(source_file, status, source_name, media_type,
+                            timestamp, None, None, None)
                 continue
 
             if status == UNREADABLE:
                 media_unreadable += 1
+                save_result(source_file, status, source_name, media_type,
+                            timestamp, None, None, None)
                 continue
 
             point = Coordinate(latitude, longitude)
@@ -563,6 +728,8 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                 outside_radius += 1
 
             media_with_valid_gps += 1
+            save_result(source_file, classification, source_name, media_type,
+                        timestamp, latitude, longitude, distance_km)
 
             attributes = ArrayList()
 
@@ -716,6 +883,8 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                 media_unreadable,
             )
         )
+
+        post_summary("GeoEvidence results: %d new, %d existing" % tuple(result_counts))
 
         if videos_skipped > 0:
             self.log(
