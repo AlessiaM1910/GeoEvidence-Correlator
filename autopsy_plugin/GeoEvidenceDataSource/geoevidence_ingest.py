@@ -40,6 +40,8 @@ from java.lang import Throwable
 from org.sleuthkit.datamodel import ReadContentInputStream
 from com.drew.imaging import ImageMetadataReader
 from com.drew.metadata.exif import GpsDirectory
+from com.drew.metadata.exif import ExifIFD0Directory
+from com.drew.metadata.exif import ExifSubIFDDirectory
 from java.io import File
 from java.lang import ProcessBuilder
 from java.util.concurrent import TimeUnit
@@ -76,6 +78,7 @@ SETTING_EXIFTOOL= "exiftool_path"
 PHOTO_EXTENSIONS = (".jpg", ".jpeg")
 
 UNREADABLE = "UNREADABLE"
+UNKNOWN_DATE = "Unknown date"
 
 EXIFTOOL_TIMEOUT_SECONDS = 60
 
@@ -172,36 +175,60 @@ def read_video_gps(abstract_file, work_directory, exiftool_path):
 
         if not process.waitFor(EXIFTOOL_TIMEOUT_SECONDS, TimeUnit.SECONDS):
             process.destroyForcibly()
-            return UNREADABLE, None, None
+            return UNREADABLE, None, None, UNKNOWN_DATE
 
         if process.exitValue() != 0:
-            return UNREADABLE, None, None
+            return UNREADABLE, None, None, UNKNOWN_DATE
 
         metadata_list = json.loads(read_text(out_path))
         if not metadata_list:
-            return UNREADABLE, None, None
+            return UNREADABLE, None, None, UNKNOWN_DATE
 
         metadata = metadata_list[0]
         if metadata.get("FileType") not in SUPPORTED_VIDEO_TYPES:
-            return UNREADABLE, None, None
+            return UNREADABLE, None, None, UNKNOWN_DATE
 
-        status, latitude, longitude, timestamp = (
-            classify_video_metadata(metadata)
-        )
-        return status, latitude, longitude
+        status, latitude, longitude, timestamp = (classify_video_metadata(metadata))
+        return status, latitude, longitude, timestamp
 
     except Throwable:
-        return UNREADABLE, None, None
+        return UNREADABLE, None, None, UNKNOWN_DATE
     except Exception:
-        return UNREADABLE, None, None
+        return UNREADABLE, None, None, UNKNOWN_DATE
     finally:
         remove_quietly(video_copy)
         remove_quietly(out_path)
         remove_quietly(err_path)
 
+def read_photo_timestamp(metadata):
+    """Return the best date found in the photo metadata."""
+    try:
+        subifd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory)
+        if subifd is not None:
+            for tag in (
+                ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL,
+                ExifSubIFDDirectory.TAG_DATETIME_DIGITIZED,
+            ):
+                value = subifd.getString(tag)
+                if value and not is_zero_date(value):
+                    return value
+
+        ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory)
+        if ifd0 is not None:
+            value = ifd0.getString(ExifIFD0Directory.TAG_DATETIME)
+            if value and not is_zero_date(value):
+                return value
+
+    except Throwable:
+        pass
+    except Exception:
+        pass
+
+    return UNKNOWN_DATE
 
 def read_photo_gps(abstract_file):
-    """Return (status, latitude, longitude) for one photo."""
+    """Return (status, latitude, longitude, timestamp) for one photo."""
+    timestamp = UNKNOWN_DATE
     try:
         stream = ReadContentInputStream(abstract_file)
         try:
@@ -209,27 +236,29 @@ def read_photo_gps(abstract_file):
         finally:
             stream.close()
 
+        timestamp = read_photo_timestamp(metadata)
+
         gps = metadata.getFirstDirectoryOfType(GpsDirectory)
         if gps is None:
-            return NO_GPS, None, None
+            return NO_GPS, None, None, timestamp
 
         location = gps.getGeoLocation()
         if location is None:
-            return INVALID_GPS, None, None
+            return INVALID_GPS, None, None, timestamp
 
         latitude = location.getLatitude()
         longitude = location.getLongitude()
 
         if not (-90.0 <= latitude <= 90.0
                 and -180.0 <= longitude <= 180.0):
-            return INVALID_GPS, None, None
+            return INVALID_GPS, None, None, timestamp
 
-        return VALID_GPS, latitude, longitude
+        return VALID_GPS, latitude, longitude, timestamp
 
     except Throwable:
-        return UNREADABLE, None, None
+        return UNREADABLE, None, None, UNKNOWN_DATE
     except Exception:
-        return UNREADABLE, None, None
+        return UNREADABLE, None, None, UNKNOWN_DATE
 
 class GeoEvidenceSettingsPanel(IngestModuleIngestJobSettingsPanel):
     """Panel shown next to the module in the ingest configuration."""
@@ -501,12 +530,12 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
             file_name = source_file.getName().lower()
 
             if file_name.endswith(PHOTO_EXTENSIONS):
-                status, latitude, longitude = read_photo_gps(source_file)
+                status, latitude, longitude, timestamp = read_photo_gps(source_file)
             elif file_name.endswith(VIDEO_EXTENSION):
                 if not exiftool_available:
                     videos_skipped += 1
                     continue
-                status, latitude, longitude = read_video_gps(source_file, work_directory, self.exiftool_path)
+                status, latitude, longitude, timestamp = read_video_gps(source_file, work_directory, self.exiftool_path)
             else:
                 continue
 
