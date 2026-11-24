@@ -65,10 +65,12 @@ MODULE_NAME = "GeoEvidence Data Source"
 
 # JPEG and MP4/MOV are the validated first scope of the project.
 SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".mp4", ".mov")
-CENTER_LATITUDE = 39.375155
-CENTER_LONGITUDE = 16.271693
+DEFAULT_CENTER_LATITUDE = 39.375155
+DEFAULT_CENTER_LONGITUDE = 16.271693
 DEFAULT_RADIUS_KM = 1.0
-SETTING_RADIUS= "radius_km"
+SETTING_CENTER_LAT = "center_lat"
+SETTING_CENTER_LON = "center_lon"
+SETTING_RADIUS = "radius_km"
 PHOTO_EXTENSIONS = (".jpg", ".jpeg")
 
 UNREADABLE = "UNREADABLE"
@@ -109,6 +111,16 @@ def parse_radius_km(text):
         raise ValueError("The radius must be greater than zero.")
 
     return radius
+
+def parse_center(latitude_text, longitude_text):
+    """Build the search center from the two texts typed by the user."""
+    if latitude_text is None or longitude_text is None:
+        raise ValueError("The center is empty.")
+
+    latitude = latitude_text.strip().replace(",", ".")
+    longitude = longitude_text.strip().replace(",", ".")
+
+    return Coordinate(latitude, longitude)
 
 def post_summary(text, message_type=IngestMessage.MessageType.INFO):
     """Show one short line in the Autopsy Ingest Inbox."""
@@ -215,20 +227,50 @@ class GeoEvidenceSettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.initComponents()
         self.customizeComponents()
 
+    def add_field(self, label_text):
+        """Add a label and a text box, and return the text box."""
+        self.add(JLabel(label_text))
+        field = JTextField(12)
+        field.setMaximumSize(field.getPreferredSize())
+        self.add(field)
+        return field
+
     def initComponents(self):
         self.setLayout(BoxLayout(self, BoxLayout.Y_AXIS))
-        self.add(JLabel("Search radius (km), default %g:" % DEFAULT_RADIUS_KM))
-        self.radius_field = JTextField(10)
-        self.radius_field.setMaximumSize(self.radius_field.getPreferredSize())
-        self.add(self.radius_field)
+        self.latitude_field = self.add_field(
+            "Center latitude, default %s:" % DEFAULT_CENTER_LATITUDE
+        )
+        self.longitude_field = self.add_field(
+            "Center longitude, default %s:" % DEFAULT_CENTER_LONGITUDE
+        )
+        self.radius_field = self.add_field(
+            "Search radius (km), default %g:" % DEFAULT_RADIUS_KM
+        )
+
+    def saved_value(self, key, default):
+        value = self.local_settings.getSetting(key)
+        if not value:
+            return str(default)
+        return value
 
     def customizeComponents(self):
-        value = self.local_settings.getSetting(SETTING_RADIUS)
-        if not value:
-            value = str(DEFAULT_RADIUS_KM)
-        self.radius_field.setText(value)
+        self.latitude_field.setText(
+            self.saved_value(SETTING_CENTER_LAT, DEFAULT_CENTER_LATITUDE)
+        )
+        self.longitude_field.setText(
+            self.saved_value(SETTING_CENTER_LON, DEFAULT_CENTER_LONGITUDE)
+        )
+        self.radius_field.setText(
+            self.saved_value(SETTING_RADIUS, DEFAULT_RADIUS_KM)
+        )
 
     def getSettings(self):
+        self.local_settings.setSetting(
+            SETTING_CENTER_LAT, self.latitude_field.getText()
+        )
+        self.local_settings.setSetting(
+            SETTING_CENTER_LON, self.longitude_field.getText()
+        )
         self.local_settings.setSetting(
             SETTING_RADIUS, self.radius_field.getText()
         )
@@ -254,6 +296,8 @@ class GeoEvidenceDataSourceFactory(IngestModuleFactoryAdapter):
 
     def getDefaultIngestJobSettings(self):
         settings = GenericIngestModuleJobSettings()
+        settings.setSetting(SETTING_CENTER_LAT, str(DEFAULT_CENTER_LATITUDE))
+        settings.setSetting(SETTING_CENTER_LON, str(DEFAULT_CENTER_LONGITUDE))
         settings.setSetting(SETTING_RADIUS, str(DEFAULT_RADIUS_KM))
         return settings
 
@@ -280,6 +324,7 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
         self.context = None
         self.local_settings = settings 
         self.radius_km= DEFAULT_RADIUS_KM
+        self.center = Coordinate(DEFAULT_CENTER_LATITUDE, DEFAULT_CENTER_LONGITUDE)
 
     def log(self, level, message):
         self.logger.logp(
@@ -289,11 +334,22 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
             message,
         )
 
+    def setting_text(self, key, default):
+        value = self.local_settings.getSetting(key)
+        if not value:
+            return str(default)
+        return value
+
     def startUp(self, context):
         self.context = context
-        radius_text = self.local_settings.getSetting(SETTING_RADIUS)
-        if not radius_text:
-            radius_text = str(DEFAULT_RADIUS_KM)
+
+        radius_text = self.setting_text(SETTING_RADIUS, DEFAULT_RADIUS_KM)
+        latitude_text = self.setting_text(
+            SETTING_CENTER_LAT, DEFAULT_CENTER_LATITUDE
+        )
+        longitude_text = self.setting_text(
+            SETTING_CENTER_LON, DEFAULT_CENTER_LONGITUDE
+        )
 
         try:
             self.radius_km = parse_radius_km(radius_text)
@@ -302,9 +358,18 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                 "GeoEvidence: invalid radius '%s'. %s" % (radius_text, error)
             )
 
+        try:
+            self.center = parse_center(latitude_text, longitude_text)
+        except ValueError as error:
+            raise IngestModuleException(
+                "GeoEvidence: invalid center '%s, %s'. %s"
+                % (latitude_text, longitude_text, error)
+            )
+
         self.log(
             Level.INFO,
-            "GeoEvidence Data Source started. Radius: %s km" % self.radius_km,
+            "GeoEvidence Data Source started. Center: %s, %s Radius: %s km"
+            % (self.center.lat, self.center.lon, self.radius_km),
         )
 
     def process(self, data_source, progress_bar):
@@ -348,12 +413,13 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
 
         blackboard = case.getSleuthkitCase().getBlackboard()
 
-        center = Coordinate(CENTER_LATITUDE,CENTER_LONGITUDE)
+        center = self.center
 
         radius_label = "%g km" % self.radius_km
-        inside_set_name = "GeoEvidence - Inside radius (%s)" % radius_label
+        inside_set_name = ("GeoEvidence - Inside radius (%s around %.4f, %.4f)"
+            % (radius_label, center.lat, center.lon))
         
-        parameters = "Center: %.6f, %.6f | Radius: %.3f km" % (CENTER_LATITUDE, CENTER_LONGITUDE, self.radius_km)
+        parameters = "Center: %.6f, %.6f | Radius: %.3f km" % (center.lat, center.lon, self.radius_km)
         
         work_directory = os.path.join(case.getTempDirectory(), "geoevidence")
         
