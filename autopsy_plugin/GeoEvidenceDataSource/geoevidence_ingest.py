@@ -48,6 +48,9 @@ from org.sleuthkit.autopsy.datamodel import ContentUtils
 from javax.swing import BoxLayout
 from javax.swing import JLabel
 from javax.swing import JTextField
+from javax.swing import JButton
+from javax.swing import JFileChooser
+from javax.swing import JPanel
 from org.sleuthkit.autopsy.ingest import GenericIngestModuleJobSettings
 from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettingsPanel
 from org.sleuthkit.autopsy.ingest.IngestModule import IngestModuleException
@@ -65,20 +68,15 @@ MODULE_NAME = "GeoEvidence Data Source"
 
 # JPEG and MP4/MOV are the validated first scope of the project.
 SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".mp4", ".mov")
-DEFAULT_CENTER_LATITUDE = 39.375155
-DEFAULT_CENTER_LONGITUDE = 16.271693
 DEFAULT_RADIUS_KM = 1.0
 SETTING_CENTER_LAT = "center_lat"
 SETTING_CENTER_LON = "center_lon"
 SETTING_RADIUS = "radius_km"
+SETTING_EXIFTOOL= "exiftool_path"
 PHOTO_EXTENSIONS = (".jpg", ".jpeg")
 
 UNREADABLE = "UNREADABLE"
-# For now the path is fixed; it will become a user setting later.
-EXIFTOOL_PATH = (
-    r"C:\Users\aless\Downloads\exiftool-13.59_64"
-    r"\exiftool-13.59_64\exiftool.exe"
-)
+
 EXIFTOOL_TIMEOUT_SECONDS = 60
 
 
@@ -112,13 +110,27 @@ def parse_radius_km(text):
 
     return radius
 
+def find_exiftool():
+    """Look for ExifTool in EXIFTOOL_PATH and in the PATH variable."""
+    candidate = os.environ.get("EXIFTOOL_PATH")
+    if candidate and os.path.isfile(candidate):
+        return candidate
+
+    for folder in os.environ.get("PATH", "").split(os.pathsep):
+        for name in ("exiftool.exe", "exiftool"):
+            path = os.path.join(folder, name)
+            if os.path.isfile(path):
+                return path
+
+    return ""
+
 def parse_center(latitude_text, longitude_text):
     """Build the search center from the two texts typed by the user."""
-    if latitude_text is None or longitude_text is None:
-        raise ValueError("The center is empty.")
+    latitude = (latitude_text or "").strip().replace(",", ".")
+    longitude = (longitude_text or "").strip().replace(",", ".")
 
-    latitude = latitude_text.strip().replace(",", ".")
-    longitude = longitude_text.strip().replace(",", ".")
+    if not latitude or not longitude:
+        raise ValueError("Enter both the latitude and the longitude of the center.")
 
     return Coordinate(latitude, longitude)
 
@@ -131,7 +143,7 @@ def post_summary(text, message_type=IngestMessage.MessageType.INFO):
     )
     IngestServices.getInstance().postMessage(message)
 
-def read_video_gps(abstract_file, work_directory):
+def read_video_gps(abstract_file, work_directory, exiftool_path):
     """Return (status, latitude, longitude) for one video via ExifTool."""
     name = abstract_file.getName().lower()
     extension = ".mov" if name.endswith(".mov") else ".mp4"
@@ -145,7 +157,7 @@ def read_video_gps(abstract_file, work_directory):
         ContentUtils.writeToFile(abstract_file, File(video_copy))
 
         command = ArrayList()
-        command.add(EXIFTOOL_PATH)
+        command.add(exiftool_path)
         command.add("-j")
         command.add("-n")
         command.add("-s")
@@ -227,25 +239,57 @@ class GeoEvidenceSettingsPanel(IngestModuleIngestJobSettingsPanel):
         self.initComponents()
         self.customizeComponents()
 
-    def add_field(self, label_text):
+    def add_field(self, label_text, columns=12):
         """Add a label and a text box, and return the text box."""
         self.add(JLabel(label_text))
-        field = JTextField(12)
+        field = JTextField(columns)
         field.setMaximumSize(field.getPreferredSize())
         self.add(field)
         return field
 
+    def add_path_field(self, label_text, columns):
+        """Add a label, a text box and a Browse button; return the box."""
+        self.add(JLabel(label_text))
+
+        row = JPanel()
+        row.setLayout(BoxLayout(row, BoxLayout.X_AXIS))
+        row.setAlignmentX(0.0)
+
+        field = JTextField(columns)
+        field.setMaximumSize(field.getPreferredSize())
+        row.add(field)
+
+        browse_button = JButton(
+            "Browse...", actionPerformed=self.browse_exiftool
+        )
+        row.add(browse_button)
+
+        self.add(row)
+        return field
+
+    def browse_exiftool(self, event):
+        """Let the user pick exiftool.exe with a file dialog."""
+        chooser = JFileChooser()
+
+        current = self.exiftool_field.getText().strip().strip('"')
+        if current:
+            chooser.setSelectedFile(File(current))
+
+        if chooser.showOpenDialog(self) == JFileChooser.APPROVE_OPTION:
+            self.exiftool_field.setText(
+                chooser.getSelectedFile().getAbsolutePath()
+            )
+
     def initComponents(self):
         self.setLayout(BoxLayout(self, BoxLayout.Y_AXIS))
         self.latitude_field = self.add_field(
-            "Center latitude, default %s:" % DEFAULT_CENTER_LATITUDE
-        )
+            "Center latitude (example: 45.4642):")
         self.longitude_field = self.add_field(
-            "Center longitude, default %s:" % DEFAULT_CENTER_LONGITUDE
-        )
+            "Center longitude (example: 9.1900):")
         self.radius_field = self.add_field(
-            "Search radius (km), default %g:" % DEFAULT_RADIUS_KM
-        )
+            "Search radius (km), default %g:" % DEFAULT_RADIUS_KM)
+        self.exiftool_field = self.add_path_field(
+            "ExifTool path (needed for videos):", 14)
 
     def saved_value(self, key, default):
         value = self.local_settings.getSetting(key)
@@ -255,13 +299,16 @@ class GeoEvidenceSettingsPanel(IngestModuleIngestJobSettingsPanel):
 
     def customizeComponents(self):
         self.latitude_field.setText(
-            self.saved_value(SETTING_CENTER_LAT, DEFAULT_CENTER_LATITUDE)
+            self.saved_value(SETTING_CENTER_LAT, "")
         )
         self.longitude_field.setText(
-            self.saved_value(SETTING_CENTER_LON, DEFAULT_CENTER_LONGITUDE)
+            self.saved_value(SETTING_CENTER_LON, "")
         )
         self.radius_field.setText(
             self.saved_value(SETTING_RADIUS, DEFAULT_RADIUS_KM)
+        )
+        self.exiftool_field.setText(
+            self.saved_value(SETTING_EXIFTOOL, find_exiftool())
         )
 
     def getSettings(self):
@@ -273,6 +320,9 @@ class GeoEvidenceSettingsPanel(IngestModuleIngestJobSettingsPanel):
         )
         self.local_settings.setSetting(
             SETTING_RADIUS, self.radius_field.getText()
+        )
+        self.local_settings.setSetting(
+            SETTING_EXIFTOOL, self.exiftool_field.getText()
         )
         return self.local_settings
     
@@ -296,9 +346,10 @@ class GeoEvidenceDataSourceFactory(IngestModuleFactoryAdapter):
 
     def getDefaultIngestJobSettings(self):
         settings = GenericIngestModuleJobSettings()
-        settings.setSetting(SETTING_CENTER_LAT, str(DEFAULT_CENTER_LATITUDE))
-        settings.setSetting(SETTING_CENTER_LON, str(DEFAULT_CENTER_LONGITUDE))
+        settings.setSetting(SETTING_CENTER_LAT, "")
+        settings.setSetting(SETTING_CENTER_LON, "")
         settings.setSetting(SETTING_RADIUS, str(DEFAULT_RADIUS_KM))
+        settings.setSetting(SETTING_EXIFTOOL, find_exiftool())
         return settings
 
     def hasIngestJobSettingsPanel(self):
@@ -324,7 +375,8 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
         self.context = None
         self.local_settings = settings 
         self.radius_km= DEFAULT_RADIUS_KM
-        self.center = Coordinate(DEFAULT_CENTER_LATITUDE, DEFAULT_CENTER_LONGITUDE)
+        self.center = None
+        self.exiftool_path= ""
 
     def log(self, level, message):
         self.logger.logp(
@@ -344,12 +396,10 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
         self.context = context
 
         radius_text = self.setting_text(SETTING_RADIUS, DEFAULT_RADIUS_KM)
-        latitude_text = self.setting_text(
-            SETTING_CENTER_LAT, DEFAULT_CENTER_LATITUDE
-        )
-        longitude_text = self.setting_text(
-            SETTING_CENTER_LON, DEFAULT_CENTER_LONGITUDE
-        )
+        latitude_text = self.setting_text(SETTING_CENTER_LAT, "")
+        longitude_text = self.setting_text(SETTING_CENTER_LON, "")
+        exiftool_text = self.setting_text(SETTING_EXIFTOOL, find_exiftool())
+        self.exiftool_path = exiftool_text.strip().strip('"')
 
         try:
             self.radius_km = parse_radius_km(radius_text)
@@ -362,7 +412,7 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
             self.center = parse_center(latitude_text, longitude_text)
         except ValueError as error:
             raise IngestModuleException(
-                "GeoEvidence: invalid center '%s, %s'. %s"
+                "GeoEvidence: invalid center (latitude '%s', longitude '%s'). %s"
                 % (latitude_text, longitude_text, error)
             )
 
@@ -405,9 +455,7 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                 seen_file_ids.add(file_id)
                 media_files.append(abstract_file)
 
-        media_files.sort(
-            key=lambda item: (item.getName().lower(), item.getId())
-        )
+        media_files.sort(key=lambda item: (item.getName().lower(), item.getId()))
 
         progress_bar.switchToDeterminate(len(media_files))
 
@@ -423,7 +471,7 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
         
         work_directory = os.path.join(case.getTempDirectory(), "geoevidence")
         
-        exiftool_available = os.path.isfile(EXIFTOOL_PATH)
+        exiftool_available = os.path.isfile(self.exiftool_path)
 
         videos_skipped = 0
 
@@ -458,7 +506,7 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                 if not exiftool_available:
                     videos_skipped += 1
                     continue
-                status, latitude, longitude = read_video_gps(source_file, work_directory)
+                status, latitude, longitude = read_video_gps(source_file, work_directory, self.exiftool_path)
             else:
                 continue
 
@@ -643,12 +691,12 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
         if videos_skipped > 0:
             self.log(
                 Level.SEVERE,
-                "ExifTool not found at " + EXIFTOOL_PATH
+                "ExifTool not found at " + self.exiftool_path
                 + ": " + str(videos_skipped) + " video(s) skipped.",
             )
             post_summary(
-                "WARNING: ExifTool not found, %d video(s) skipped"
-                % videos_skipped,
+                "WARNING: ExifTool not found (set its path in the module "
+                "settings), %d video(s) skipped" % videos_skipped,
                 IngestMessage.MessageType.WARNING,
             )
 
