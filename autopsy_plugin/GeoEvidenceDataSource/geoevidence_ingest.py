@@ -13,10 +13,14 @@ Bookmark. Files inside the radius also get an Interesting Item. Both
 record the center and the radius used, so a run with different
 parameters creates new results instead of being skipped.
 
-Center, radius and the ExifTool path are fixed constants for now.
+Center and the ExifTool path are fixed constants for now. The search
+radius is set in the module settings before the ingest.
 """
 
 import inspect
+import json
+import os
+import math
 from java.util import ArrayList
 
 from georange import Coordinate
@@ -36,12 +40,17 @@ from java.lang import Throwable
 from org.sleuthkit.datamodel import ReadContentInputStream
 from com.drew.imaging import ImageMetadataReader
 from com.drew.metadata.exif import GpsDirectory
-import json
-import os
 from java.io import File
 from java.lang import ProcessBuilder
 from java.util.concurrent import TimeUnit
 from org.sleuthkit.autopsy.datamodel import ContentUtils
+
+from javax.swing import BoxLayout
+from javax.swing import JLabel
+from javax.swing import JTextField
+from org.sleuthkit.autopsy.ingest import GenericIngestModuleJobSettings
+from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettingsPanel
+from org.sleuthkit.autopsy.ingest.IngestModule import IngestModuleException
 
 from video_loader import (
     EXIFTOOL_FIELDS,
@@ -58,7 +67,8 @@ MODULE_NAME = "GeoEvidence Data Source"
 SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".mp4", ".mov")
 CENTER_LATITUDE = 39.375155
 CENTER_LONGITUDE = 16.271693
-RADIUS_KM = 1.0
+DEFAULT_RADIUS_KM = 1.0
+SETTING_RADIUS= "radius_km"
 PHOTO_EXTENSIONS = (".jpg", ".jpeg")
 
 UNREADABLE = "UNREADABLE"
@@ -85,7 +95,22 @@ def remove_quietly(path):
     except Exception:
         pass
 
-def post_summary(text, message_type=IngestMessage.MessageType.DATA):
+def parse_radius_km(text):
+    """Convert the radius typed by the user into a positive number."""
+    if text is None:
+        raise ValueError("The radius is empty.")
+
+    try:
+        radius = float(text.strip().replace(",", "."))
+    except ValueError:
+        raise ValueError("The radius must be a number.")
+
+    if math.isnan(radius) or math.isinf(radius) or radius <= 0:
+        raise ValueError("The radius must be greater than zero.")
+
+    return radius
+
+def post_summary(text, message_type=IngestMessage.MessageType.INFO):
     """Show one short line in the Autopsy Ingest Inbox."""
     message = IngestMessage.createMessage(
         message_type,
@@ -182,6 +207,33 @@ def read_photo_gps(abstract_file):
     except Exception:
         return UNREADABLE, None, None
 
+class GeoEvidenceSettingsPanel(IngestModuleIngestJobSettingsPanel):
+    """Panel shown next to the module in the ingest configuration."""
+
+    def __init__(self, settings):
+        self.local_settings = settings
+        self.initComponents()
+        self.customizeComponents()
+
+    def initComponents(self):
+        self.setLayout(BoxLayout(self, BoxLayout.Y_AXIS))
+        self.add(JLabel("Search radius (km), default %g:" % DEFAULT_RADIUS_KM))
+        self.radius_field = JTextField(10)
+        self.radius_field.setMaximumSize(self.radius_field.getPreferredSize())
+        self.add(self.radius_field)
+
+    def customizeComponents(self):
+        value = self.local_settings.getSetting(SETTING_RADIUS)
+        if not value:
+            value = str(DEFAULT_RADIUS_KM)
+        self.radius_field.setText(value)
+
+    def getSettings(self):
+        self.local_settings.setSetting(
+            SETTING_RADIUS, self.radius_field.getText()
+        )
+        return self.local_settings
+    
 class GeoEvidenceDataSourceFactory(IngestModuleFactoryAdapter):
     """Describe the GeoEvidence Data Source module to Autopsy."""
 
@@ -200,8 +252,23 @@ class GeoEvidenceDataSourceFactory(IngestModuleFactoryAdapter):
     def isDataSourceIngestModuleFactory(self):
         return True
 
-    def createDataSourceIngestModule(self, ingest_options):
-        return GeoEvidenceDataSourceModule()
+    def getDefaultIngestJobSettings(self):
+        settings = GenericIngestModuleJobSettings()
+        settings.setSetting(SETTING_RADIUS, str(DEFAULT_RADIUS_KM))
+        return settings
+
+    def hasIngestJobSettingsPanel(self):
+        return True
+
+    def getIngestJobSettingsPanel(self, settings):
+        if not isinstance(settings, GenericIngestModuleJobSettings):
+            settings = self.getDefaultIngestJobSettings()
+        return GeoEvidenceSettingsPanel(settings)
+
+    def createDataSourceIngestModule(self, settings):
+        if not isinstance(settings, GenericIngestModuleJobSettings):
+            settings = self.getDefaultIngestJobSettings()
+        return GeoEvidenceDataSourceModule(settings)
 
 
 class GeoEvidenceDataSourceModule(DataSourceIngestModule):
@@ -209,8 +276,10 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
 
     logger = Logger.getLogger(MODULE_NAME)
 
-    def __init__(self):
+    def __init__(self,settings):
         self.context = None
+        self.local_settings = settings 
+        self.radius_km= DEFAULT_RADIUS_KM
 
     def log(self, level, message):
         self.logger.logp(
@@ -222,7 +291,21 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
 
     def startUp(self, context):
         self.context = context
-        self.log(Level.INFO, "GeoEvidence Data Source started.")
+        radius_text = self.local_settings.getSetting(SETTING_RADIUS)
+        if not radius_text:
+            radius_text = str(DEFAULT_RADIUS_KM)
+
+        try:
+            self.radius_km = parse_radius_km(radius_text)
+        except ValueError as error:
+            raise IngestModuleException(
+                "GeoEvidence: invalid radius '%s'. %s" % (radius_text, error)
+            )
+
+        self.log(
+            Level.INFO,
+            "GeoEvidence Data Source started. Radius: %s km" % self.radius_km,
+        )
 
     def process(self, data_source, progress_bar):
         case = Case.getCurrentCase()
@@ -266,8 +349,11 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
         blackboard = case.getSleuthkitCase().getBlackboard()
 
         center = Coordinate(CENTER_LATITUDE,CENTER_LONGITUDE)
+
+        radius_label = "%g km" % self.radius_km
+        inside_set_name = "GeoEvidence - Inside radius (%s)" % radius_label
         
-        parameters = "Center: %.6f, %.6f | Radius: %.3f km" % (CENTER_LATITUDE, CENTER_LONGITUDE, RADIUS_KM)
+        parameters = "Center: %.6f, %.6f | Radius: %.3f km" % (CENTER_LATITUDE, CENTER_LONGITUDE, self.radius_km)
         
         work_directory = os.path.join(case.getTempDirectory(), "geoevidence")
         
@@ -326,7 +412,7 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
 
             distance_km = point.distance_to(center, "km")
 
-            if distance_km <= RADIUS_KM:
+            if distance_km <= self.radius_km:
                 classification = "INSIDE_RADIUS"
                 inside_radius += 1
             else:
@@ -357,7 +443,7 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                 BlackboardAttribute(
                     BlackboardAttribute.Type.TSK_NAME,
                     MODULE_NAME,
-                    source_file.getName(),
+                    "%s (%s)" % (source_file.getName(), radius_label),
                 )
             )
 
@@ -365,13 +451,14 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                 BlackboardAttribute(
                     BlackboardAttribute.Type.TSK_COMMENT,
                     MODULE_NAME,
-                        "Distance: %.3f km | %s | %s" % (
+                    "Radius: %s | Distance: %.3f km | %s | %s" % (
+                        radius_label,
                         distance_km,
                         classification,
                         parameters,
                     ),
-                    ),
                 )
+            )
 
             if classification == "INSIDE_RADIUS":
                 inside_attributes = ArrayList()
@@ -380,7 +467,7 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                     BlackboardAttribute(
                         BlackboardAttribute.Type.TSK_SET_NAME,
                         MODULE_NAME,
-                        "GeoEvidence - Inside radius",
+                        inside_set_name,
                     )
                 )
 
@@ -388,7 +475,8 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                     BlackboardAttribute(
                         BlackboardAttribute.Type.TSK_COMMENT,
                         MODULE_NAME,
-                        "Distance: %.3f km | INSIDE_RADIUS | %s" % (
+                        "Radius: %s | Distance: %.3f km | INSIDE_RADIUS | %s" % (
+                            radius_label,
                             distance_km,
                             parameters,
                         ),
@@ -407,7 +495,7 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
                             BlackboardArtifact.Type.TSK_INTERESTING_ITEM,
                             Score.SCORE_LIKELY_NOTABLE,
                             None,
-                            "GeoEvidence - Inside radius",
+                            inside_set_name,
                             None,
                             inside_attributes,
                         ).getAnalysisResult()
