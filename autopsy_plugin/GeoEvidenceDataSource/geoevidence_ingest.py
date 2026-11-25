@@ -86,7 +86,6 @@ from geoevidence_common import (
 )
 
 from geoevidence_results import register_result_types, post_result
-from geoevidence_report import save_summary_report
 
 # JPEG and MP4/MOV are the validated first scope of the project.
 SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".mp4", ".mov")
@@ -794,20 +793,6 @@ class GeoEvidenceDataSourceModule(DataSourceIngestModule):
         )
 
         post_summary("GeoEvidence results: %d new, %d existing" % tuple(result_counts))
-
-        if result_types is not None:
-            try:
-                report_path = save_summary_report(
-                    case, data_source, blackboard, result_types,
-                    parameters, center, self.radius_km,
-                )
-                post_summary("Summary report: " + report_path)
-            except Throwable as error:
-                self.log(Level.SEVERE,
-                         "Unable to write the summary report: " + str(error))
-            except Exception as error:
-                self.log(Level.SEVERE,
-                         "Unable to write the summary report: " + str(error))
 
         if videos_skipped > 0:
             self.log(
