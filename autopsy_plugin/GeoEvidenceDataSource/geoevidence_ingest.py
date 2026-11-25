@@ -68,7 +68,7 @@ from org.sleuthkit.autopsy.ingest import GenericIngestModuleJobSettings
 from org.sleuthkit.autopsy.ingest import IngestModuleIngestJobSettingsPanel
 from org.sleuthkit.autopsy.ingest.IngestModule import IngestModuleException
 
-from video_loader import (
+from video_metadata import (
     EXIFTOOL_FIELDS,
     INVALID_GPS,
     NO_GPS,
